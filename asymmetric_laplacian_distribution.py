@@ -1,5 +1,5 @@
 import numpy as np
-import matplotlib.pyplot as plt
+import pandas as pd
 
 def asymmetric_laplace_distribution(x,mu,lam,tau1,tau2):
     """
@@ -88,40 +88,67 @@ def generate_ALD(X, mu, amplitude_condition, time_constant_condition):
 
 
 
-V_ald = np.vectorize(asymmetric_laplace_distribution)
-X = np.round(np.linspace(0,3500,3501))
-np.random.seed(42)
+def generate_ALD_data(X, amplitude_conditions, time_constant_conditions, samples_per_condition=1000, mu=1750):
+    conditions = []
+    tau1s = []
+    tau2s = []
+    lams = []
+    F_signal = []
+    F_signal_noise = []
+    noises = []
 
-amplitude_conditions = ["S", "M", "L"]
-time_constant_conditions = ["equal_sharp","equal_wide", "negative_skew", "positive_skew"]
-samples_per_condition = 1000
-mu = 1750
-
-
-conditions = []
-tau1s = []
-tau2s = []
-lams = []
-F_signal = []
-F_signal_noise = []
-noises = []
-
-for amplitude_condition in amplitude_conditions:
-    for time_constant_condition in  time_constant_conditions:
-        for i in range(samples_per_condition):
-            conditions.append(amplitude_condition + "/" + time_constant_condition)
-            f_i, tau1, tau2, lam = generate_ALD(X,mu=mu,amplitude_condition=amplitude_condition, time_constant_condition=time_constant_condition)
-            if amplitude_condition == "S":
-                noise = np.random.normal(0, 0.02, f_i.shape)
-            elif amplitude_condition == "M":
-                noise = np.random.normal(0, 0.07, f_i.shape)
-            elif amplitude_condition == "M":
-                noise = np.random.normal(0, 0.14, f_i.shape)
+    for amplitude_condition in amplitude_conditions:
+        for time_constant_condition in  time_constant_conditions:
+            for i in range(samples_per_condition):
+                conditions.append(amplitude_condition + "/" + time_constant_condition)
+                f_i, tau1, tau2, lam = generate_ALD(X,mu=mu,amplitude_condition=amplitude_condition, time_constant_condition=time_constant_condition)
+                if amplitude_condition == "S":
+                    noise = np.random.normal(0, 0.02, f_i.shape)
+                elif amplitude_condition == "M":
+                    noise = np.random.normal(0, 0.07, f_i.shape)
+                elif amplitude_condition == "M":
+                    noise = np.random.normal(0, 0.14, f_i.shape)
 
 
-            F_signal.append(f_i)
-            F_signal_noise.append(f_i+noise)
-            noises.append(noise)
-            tau1s.append(tau1)
-            tau2s.append(tau2)
-            lams.append(lam)
+                F_signal.append(f_i)
+                F_signal_noise.append(f_i+noise)
+                noises.append(noise)
+                tau1s.append(tau1)
+                tau2s.append(tau2)
+                lams.append(lam)
+
+    param_data = pd.DataFrame(
+    {'Condition': conditions,
+     'Lambda': lams,
+     'Tau1': tau1s,
+     'Tau2': tau2s
+    })
+    return F_signal, F_signal_noise, noises, param_data
+
+
+
+def main():
+    print("Generating asymmetric laplacian Data!!!")
+    X = np.round(np.linspace(0,3500,3501))
+    np.random.seed(42)
+
+    amplitude_conditions = ["S", "M", "L"]
+    time_constant_conditions = ["equal_sharp","equal_wide", "negative_skew", "positive_skew"]
+    samples_per_condition = 1000
+    mu = 1750
+
+    F_signal, F_signal_noise, noises, param_data = generate_ALD_data(X, amplitude_conditions, time_constant_conditions, samples_per_condition=samples_per_condition, mu=mu)
+    print("Done!")
+
+
+    param_data.to_csv("data/parameter_data",index=False)
+
+    np.save('data/F_signal',F_signal)
+    np.save('data/F_signal_noise', F_signal_noise)
+
+
+if __name__== "__main__":
+  main()
+
+
+
