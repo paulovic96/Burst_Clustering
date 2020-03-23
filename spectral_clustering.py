@@ -194,5 +194,5 @@ def spectral_clustering(data, metric, n_clusters,  k=5, mutual = False, weightin
         labels = cluster_eigenvector_embedding(eigvec, n_cluster)
         labels_per_n_clusters.append(labels)
 
-    return labels_per_n_clusters
+    return labels_per_n_clusters, eigvec, eigval
 
