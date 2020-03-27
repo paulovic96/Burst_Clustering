@@ -22,10 +22,10 @@ training_set = data[training_set_indices]
 
 n_clusters = range(1,21)
 
-labels, eigvec, eigval = spectral_clustering(training_set, "euclidean",n_clusters,  k=10, mutual = False, weighting = "distance", normalize = True, reg_lambda = 0.1, save_laplacian = False, save_eigenvalues_and_vectors = False)
+#labels, eigvec, eigval = spectral_clustering(training_set, "euclidean",n_clusters,  k=10, mutual = False, weighting = "distance", normalize = True, reg_lambda = 0.1, save_laplacian = False, save_eigenvalues_and_vectors = False)
 
 #np.save("Toy_data/labels/labels_k_10_reg=0.1_training",labels)
-labels = np.load("Toy_data/Labels/labels_k_5_reg=0.1_training.npy")
+labels = np.load("Toy_data/Labels/labels_k=10_reg=0.1.npy")
 
 
 # check if all cluster captured correctly
