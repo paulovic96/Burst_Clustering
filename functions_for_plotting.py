@@ -169,7 +169,14 @@ def get_true_label_mapping(true_labels, label_predictions):
 
 def get_splitted_clusters(highest_overlap_class_for_prediction):
     splitted_classes, count = np.unique(np.asarray(list(highest_overlap_class_for_prediction.values()))[:,0], return_counts=True)
-    return splitted_classes[np.where(count > 1)[0]], count[np.where(count > 1)[0]]
+    splitted_classes = splitted_classes[np.where(count > 1)[0]]
+    count = count[np.where(count > 1)[0]]
+    new_clusters = np.asarray(list(highest_overlap_class_for_prediction.keys()))
+    splitted_into_new_clusters = {}
+    for splitted_class in splitted_classes:
+        splitted_into_new_clusters[splitted_class] = list(new_clusters[np.where(np.asarray(list(highest_overlap_class_for_prediction.values()))[:,0] == splitted_class)])
+
+    return splitted_classes, count, splitted_into_new_clusters
 
 def get_merged_clusters(corresponding_true_class_for_prediction):
     merged_clusters = np.asarray(list(corresponding_true_class_for_prediction.values()))[:, 0]
@@ -195,89 +202,168 @@ rows = 3
 k_clusters = 12
 
 
-def plot_clusters(data, true_labels,labels_k, k_clusters,rows,columns, figsize = None, burst_percent = False, n_bursts=None, y_lim = None, plot_mean = False, title = None):
+def plot_clusters(data, true_labels,labels_k, k_clusters,rows,columns, figsize = None, percent_true_cluster = False, n_bursts=None, y_lim = None, plot_mean = False, title = None):
     corresponding_true_class_for_prediction, highest_overlap_class_for_prediction = get_true_label_mapping(true_labels, labels_k)
-    splitted_classes, split_count = get_splitted_clusters(highest_overlap_class_for_prediction)
-    merged_classes, new_clusters = get_merged_clusters(corresponding_true_class_for_prediction)
+    splitted_classes, split_count, new_clusters_splitted = get_splitted_clusters(highest_overlap_class_for_prediction)
+    merged_classes, new_clusters_merged = get_merged_clusters(corresponding_true_class_for_prediction)
     position_count_for_splitted_classes = np.zeros(len(split_count))
 
     normal_layout = np.arange(k_clusters).reshape((rows,columns))
-    normal_rows = rows
-
-    if len(splitted_classes) > 0:
-        rows, rows_per_column = get_new_layout(k_clusters, rows, columns, splitted_classes, split_count)
 
     fig = plt.figure(figsize=figsize)
-    #if title:
-    #    fig.suptitle(title, fontsize=16)
-    fig.subplots_adjust(hspace=4, wspace=0.2)
-    gs = fig.add_gridspec(rows, columns)
-    rows_per_layout_rows = int(rows/normal_rows)
+    if title:
+        fig.suptitle(title, fontsize=16)
+
+    fig.subplots_adjust(hspace=0.5, wspace=0.2)
+    outer_grid = matplotlib.gridspec.GridSpec(rows, columns)
 
     for i in range(k_clusters):
         class_i = data[np.where(labels_k == i)]
         corresponding_true_label = highest_overlap_class_for_prediction[i][0] # get true label and also position
         corresponding_column = int(np.where(normal_layout == corresponding_true_label)[1][0])
-        corresponding_row = int(np.where(normal_layout == corresponding_true_label)[0][0] * rows_per_layout_rows)
+        corresponding_row = int(np.where(normal_layout == corresponding_true_label)[0][0]) #* rows_per_layout_rows)
 
 
         if corresponding_true_label in splitted_classes:
+            true_class_size = len(data[np.where(true_labels == corresponding_true_label)])
             splitted_into = split_count[np.where(splitted_classes==corresponding_true_label)[0]][0]
-            rows_per_plot = rows_per_layout_rows/splitted_into
+            inner_grid = matplotlib.gridspec.GridSpecFromSubplotSpec(splitted_into, 1, subplot_spec=outer_grid[corresponding_row,corresponding_column], wspace=0.0, hspace=0.0)
             position_count = position_count_for_splitted_classes[np.where(splitted_classes==corresponding_true_label)[0]]
-            row_start = int(corresponding_row + position_count*np.floor(rows_per_plot))
+            row_start = int(position_count)
 
-            if position_count < splitted_into-1: # first plot of splitted cluster
-                row_end = int(row_start + np.floor(rows_per_plot))
+
+
+            if position_count == 0: # first plot of splitted cluster
+                true_clusters = corresponding_true_class_for_prediction[i][0]
+                true_cluster_counts = []
+                true_cluster_percents = []
+
+                for new_cluster_splitted in new_clusters_splitted[corresponding_true_label]:
+                    true_cluster_count = corresponding_true_class_for_prediction[new_cluster_splitted][1]
+                    true_cluster_percents += [true_cluster_count/true_class_size]
+                    true_cluster_counts += [true_cluster_count]
+
+                if len(new_clusters_splitted[corresponding_true_label]) > 2:
+                    if percent_true_cluster:
+                        cluster_title = ("Cluster [" + ', '.join(['%d'] * len(new_clusters_splitted[corresponding_true_label])) + "]" +
+                                        "\nTrue Cluster: [" + ', '.join(['%d'] * len(true_clusters)) + "]" +
+                                        "\n%%: [" + ', '.join(['%.1f'] * len(true_cluster_percents)) + "]") % tuple(new_clusters_splitted[corresponding_true_label] + list(true_clusters) + list(np.round(np.asarray(true_cluster_percents) * 100, decimals=1)))  # sum(list(map(list,zip(true_clusters,true_cluster_counts))),[]))
+                    else:
+                        cluster_title = ("Cluster [" + ', '.join(['%d'] * len(new_clusters_splitted[corresponding_true_label])) + "]" +
+                                        "\nTrue Cluster: [" + ', '.join(['%d'] * len(true_clusters)) + "]" +
+                                        "\n#: [" + ', '.join(['%d'] * len(true_cluster_counts)) + "]") % tuple(new_clusters_splitted[corresponding_true_label] + list(true_clusters) + list(true_cluster_counts))  # sum(list(map(list,zip(true_clusters,true_cluster_counts))),[]))
+                else:
+                    if percent_true_cluster:
+                        cluster_title = ("Cluster [" + ', '.join(['%d'] * len(new_clusters_splitted[corresponding_true_label])) + "]" +
+                                         "\nTrue Cluster: [" + ', '.join(['%d'] * len(true_clusters)) + "] " +
+                                         "%%: [" + ', '.join(['%.1f'] * len(true_cluster_percents)) + "]") % tuple(new_clusters_splitted[corresponding_true_label] + list(true_clusters) + list(np.round(np.asarray(true_cluster_percents) * 100, decimals=1)))  # sum(list(map(list,zip(true_clusters,true_cluster_counts))),[]))
+                    else:
+                        cluster_title = ("Cluster [" + ', '.join(['%d'] * len(new_clusters_splitted[corresponding_true_label])) + "]" +
+                                        "\nTrue Cluster: [" + ', '.join(['%d'] * len(true_clusters)) + "] " +
+                                        "#: [" + ', '.join(['%d'] * len(true_cluster_counts)) + "]") % tuple(new_clusters_splitted[corresponding_true_label] + list(true_clusters) + list(true_cluster_counts))  # sum(list(map(list,zip(true_clusters,true_cluster_counts))),[]))
+            row_end = int(row_start + 1)
+
+
+
+            if position_count == 0:
+                topax = fig.add_subplot(inner_grid[row_start:row_end, 0])
+                topax.set_title(cluster_title,loc="left") # only set title on top of split
+
+                if plot_mean:
+                    topax.plot(np.mean(class_i, axis=0))
+                else:
+                    if not n_bursts:
+                        n_bursts = len(class_i)
+
+                    for burst in class_i[0:n_bursts]:
+                        topax.plot(burst)
+
+                if y_lim:
+                    topax.set_ylim(y_lim)
+
+                plt.setp(topax.get_xticklabels(), visible=False)
+
             else:
-                row_end = int(row_start + np.ceil(rows_per_plot))
+                if position_count < splitted_into-1:
+                    ax = fig.add_subplot(inner_grid[row_start:row_end, 0], sharex=topax)
+                    ax.set_xticklabels([])
+                    plt.setp(ax.get_xticklabels(), visible=False)
 
-            ax = fig.add_subplot(gs[row_start:row_end, corresponding_column])
+                else:# position_count == splitted_into-1:
+                    ax = fig.add_subplot(inner_grid[row_start:row_end, 0], sharex=topax)
+                    ax.set_xlabel("Time")
+
+                if plot_mean:
+                    ax.plot(np.mean(class_i, axis=0))
+                else:
+                    if not n_bursts:
+                        n_bursts = len(class_i)
+
+                    for burst in class_i[0:n_bursts]:
+                        ax.plot(burst)
+
+                if y_lim:
+                    ax.set_ylim(y_lim)
             position_count_for_splitted_classes[np.where(splitted_classes == corresponding_true_label)[0]] += 1
+
         else:
             row_start = corresponding_row
-            row_end = corresponding_row+rows_per_layout_rows
+            row_end = int(corresponding_row + 1)
 
-            if i in new_clusters:
-                corresponding_merged_true_clusters = list(merged_classes[np.where(new_clusters == i)[0]][0])
+            if i in new_clusters_merged:
+                corresponding_merged_true_clusters = list(merged_classes[np.where(new_clusters_merged == i)[0]][0])
                 corresponding_merged_true_clusters.remove(corresponding_true_label)
                 for merged_class in corresponding_merged_true_clusters:
-                    row_i = int(np.where(normal_layout == merged_class)[0][0] * rows_per_layout_rows)
+                    row_i = int(np.where(normal_layout == merged_class)[0][0])
                     column_i =  int(np.where(normal_layout == merged_class)[1][0])
-                    ax = fig.add_subplot(gs[row_i:(row_i + rows_per_layout_rows), column_i])
+                    ax = fig.add_subplot(outer_grid[row_i:(row_i + 1), column_i])
                     ax.plot()
-                    ax.set_xlabel("Time")
+                    ax.set_xticklabels([])
                     if y_lim:
                         ax.set_ylim(y_lim)
 
+            ax = fig.add_subplot(outer_grid[row_start:row_end, corresponding_column])
 
-            ax = fig.add_subplot(gs[row_start:row_end, corresponding_column])
+            true_clusters = corresponding_true_class_for_prediction[i][0]
+            true_cluster_counts = corresponding_true_class_for_prediction[i][1]
+            true_cluster_percents = [true_cluster_counts[i]/len(data[np.where(true_labels == true_cluster)[0]]) for i,true_cluster in enumerate(true_clusters)]
+            if len(true_clusters) > 1:
+                if percent_true_cluster:
+                    cluster_title = ("Cluster %i \nTrue Cluster: [" + ', '.join(
+                                            ['%d'] * len(true_clusters)) + "]" + "\n%%: [" + ', '.join(
+                                            ['%.1f'] * len(true_cluster_percents)) + "]") % tuple([i] + list(true_clusters) + list(np.round(np.asarray(true_cluster_percents) * 100, decimals=1)))  # sum(list(map(list,zip(true_clusters,true_cluster_counts))),[]))
+                else:
+                    cluster_title = ("Cluster %i \nTrue Cluster: [" + ', '.join(
+                        ['%d'] * len(true_clusters)) + "]" + "\n#: [" + ', '.join(
+                        ['%d'] * len(true_cluster_counts)) + "]") % tuple([i] + list(true_clusters) + list(
+                        true_cluster_counts))  # sum(list(map(list,zip(true_clusters,true_cluster_counts))),[]))
+            else:
+                if percent_true_cluster:
+                    cluster_title = ("Cluster %i \nTrue Cluster: [" + ', '.join(
+                        ['%d'] * len(true_clusters)) + "] " + "%%: [" + ', '.join(
+                        ['%.1f'] * len(true_cluster_percents)) + "]") % tuple([i] + list(true_clusters) + list(np.round(np.asarray(true_cluster_percents) * 100, decimals=1)) ) # sum(list(map(list,zip(true_clusters,true_cluster_counts))),[]))
+                else:
+                    cluster_title = ("Cluster %i \nTrue Cluster: [" + ', '.join(
+                        ['%d'] * len(true_clusters)) + "]" + " #: [" + ', '.join(
+                        ['%d'] * len(true_cluster_counts)) + "]") % tuple([i] + list(true_clusters) + list(
+                        true_cluster_counts))  # sum(list(map(list,zip(true_clusters,true_cluster_counts))),[]))
+            ax.set_title(cluster_title, loc="left")
+            ax.set_xlabel("Time")
 
-        ax.set_xlabel("Time")
 
-        if plot_mean:
-            ax.plot(np.mean(class_i, axis = 0))
-        else:
-            if not n_bursts:
-                n_bursts = len(class_i)
 
-            for burst in class_i[0:n_bursts]:
-                ax.plot(burst)
+            if plot_mean:
+                ax.plot(np.mean(class_i, axis = 0))
+            else:
+                if not n_bursts:
+                    n_bursts = len(class_i)
 
-        if y_lim:
-            ax.set_ylim(y_lim)
+                for burst in class_i[0:n_bursts]:
+                    ax.plot(burst)
 
-        true_clusters = corresponding_true_class_for_prediction[i][0]
-        true_cluster_counts = corresponding_true_class_for_prediction[i][1]
+            if y_lim:
+                ax.set_ylim(y_lim)
 
-        if len(true_clusters)>1:
-            cluster_title = ("Cluster %i \nTrue Cluster: [" + ', '.join(['%d']*len(true_clusters)) + "]" + "\n#: [" + ', '.join(['%d']*len(true_cluster_counts)) + "]") % tuple([i] + list(true_clusters) + list(true_cluster_counts))#sum(list(map(list,zip(true_clusters,true_cluster_counts))),[]))
-        else:
-            cluster_title = ("Cluster %i \nTrue Cluster: [" + ', '.join(
-                ['%d'] * len(true_clusters)) + "]" + " #: [" + ', '.join(
-                ['%d'] * len(true_cluster_counts)) + "]") % tuple([i] + list(true_clusters) + list(
-                true_cluster_counts))  # sum(list(map(list,zip(true_clusters,true_cluster_counts))),[]))
-        ax.set_title(cluster_title,loc="left")
 
         #if burst_percent:
             #ax.set_title(
@@ -286,6 +372,7 @@ def plot_clusters(data, true_labels,labels_k, k_clusters,rows,columns, figsize =
         #else:
             #ax.set_title("Class %i Mean (%i Bursts )" % ((i + 1), len(class_i)), fontsize=12)
 
+        #plt.tight_layout()
 
 
 
@@ -295,8 +382,7 @@ def plot_clusters(data, true_labels,labels_k, k_clusters,rows,columns, figsize =
 
 
 
-
-plot_clusters(data, true_labels,labels_k, k_clusters,3,4, figsize = (30,15), burst_percent = False, n_bursts=10, y_lim = (0,16), plot_mean = False, title = None)
+plot_clusters(data, true_labels,labels_k, k_clusters,3,4, figsize = (30,15), percent_true_cluster = True, n_bursts=10, y_lim = (0,16), plot_mean = False, title = None)
 
 _, idx = np.unique(labels_k, return_index=True)
 arrangement = labels_k[np.sort(idx)]
@@ -304,6 +390,6 @@ arrangement = labels_k[np.sort(idx)]
 
 
 
-plot_cluster_examples(data, labels_k, k, 3, 4, figsize = (30,25), burst_percent = False, n_bursts=None, y_lim = (0,16),plot_mean=False, arrangement = None, title = None)
+plot_cluster_examples(data, labels_k, k, 3, 4, figsize = (30,25), burst_percent = True, n_bursts=None, y_lim = (0,16),plot_mean=False, arrangement = None, title = None)
 
 plt.close()
