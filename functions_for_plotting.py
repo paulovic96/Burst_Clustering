@@ -5,6 +5,7 @@ from matplotlib import pyplot as plt
 from matplotlib import cm
 import seaborn as sns
 
+
 def plot_cluster_examples(data, labels, k_clusters,rows,columns, figsize = (30,25), burst_percent = False, n_bursts=None, y_lim = None, plot_mean = False, arrangement = None, title = None):
     if k_clusters < 10:
         colors = ["C" + str(i) for i in range(k_clusters)]
@@ -146,13 +147,6 @@ def plot_cluster_distribution_comparison(data, labels, k_clusters, figsize = (30
         ax4.indicate_inset_zoom(ax4_inset)
 
 
-
-data_dir = "data/"
-
-data = np.load(data_dir + "F_signal_noise.npy")
-true_labels = np.repeat(range(12), 1000)
-
-
 def get_true_label_mapping(true_labels, label_predictions):
     corresponding_true_classes_for_prediction = {}
     highest_overlap_class_for_prediction = {}
@@ -192,14 +186,7 @@ def get_new_layout(k_clusters, rows, columns, splitted_classes, split_count):
         rows_per_column[position_in_layout[1][0]] = max(rows_per_column[position_in_layout[1][0]], len(layout)*split_count[i])
     return max(rows_per_column), rows_per_column
 
-label_predictions = np.load("Toy_data/Labels/labels_k=5_reg=0.1.npy")
-k = 12
-labels_k = label_predictions[k-1]
 
-
-columns = 4
-rows = 3
-k_clusters = 12
 
 
 def plot_clusters(data, true_labels,labels_k, k_clusters,rows,columns, figsize = None, percent_true_cluster = False, n_bursts=None, y_lim = None, plot_mean = False, title = None):
@@ -208,16 +195,17 @@ def plot_clusters(data, true_labels,labels_k, k_clusters,rows,columns, figsize =
     merged_classes, new_clusters_merged = get_merged_clusters(corresponding_true_class_for_prediction)
     position_count_for_splitted_classes = np.zeros(len(split_count))
 
-    normal_layout = np.arange(k_clusters).reshape((rows,columns))
+    normal_layout = np.arange(rows*columns).reshape((rows,columns))
 
+    plt.close("all")
     fig = plt.figure(figsize=figsize)
     if title:
         fig.suptitle(title, fontsize=16)
 
-    fig.subplots_adjust(hspace=0.5, wspace=0.2)
+    fig.subplots_adjust(left = 0.05, right=0.95,bottom=0.05,hspace=0.75, wspace=0.15)
     outer_grid = matplotlib.gridspec.GridSpec(rows, columns)
 
-    for i in range(k_clusters):
+    for i in np.unique(labels_k):
         class_i = data[np.where(labels_k == i)]
         corresponding_true_label = highest_overlap_class_for_prediction[i][0] # get true label and also position
         corresponding_column = int(np.where(normal_layout == corresponding_true_label)[1][0])
@@ -248,6 +236,8 @@ def plot_clusters(data, true_labels,labels_k, k_clusters,rows,columns, figsize =
                         cluster_title = ("Cluster [" + ', '.join(['%d'] * len(new_clusters_splitted[corresponding_true_label])) + "]" +
                                         "\nTrue Cluster: [" + ', '.join(['%d'] * len(true_clusters)) + "]" +
                                         "\n%%: [" + ', '.join(['%.1f'] * len(true_cluster_percents)) + "]") % tuple(new_clusters_splitted[corresponding_true_label] + list(true_clusters) + list(np.round(np.asarray(true_cluster_percents) * 100, decimals=1)))  # sum(list(map(list,zip(true_clusters,true_cluster_counts))),[]))
+                                         #"\n%%: [" + ', '.join(['%d/%d'] * len(true_cluster_counts)) + "]") % tuple(
+                            #new_clusters_splitted[corresponding_true_label] + list(true_clusters) + sum(list(map(list,zip(true_cluster_counts,np.repeat(true_class_size, len(true_cluster_counts))))),[]))
                     else:
                         cluster_title = ("Cluster [" + ', '.join(['%d'] * len(new_clusters_splitted[corresponding_true_label])) + "]" +
                                         "\nTrue Cluster: [" + ', '.join(['%d'] * len(true_clusters)) + "]" +
@@ -257,6 +247,7 @@ def plot_clusters(data, true_labels,labels_k, k_clusters,rows,columns, figsize =
                         cluster_title = ("Cluster [" + ', '.join(['%d'] * len(new_clusters_splitted[corresponding_true_label])) + "]" +
                                          "\nTrue Cluster: [" + ', '.join(['%d'] * len(true_clusters)) + "] " +
                                          "%%: [" + ', '.join(['%.1f'] * len(true_cluster_percents)) + "]") % tuple(new_clusters_splitted[corresponding_true_label] + list(true_clusters) + list(np.round(np.asarray(true_cluster_percents) * 100, decimals=1)))  # sum(list(map(list,zip(true_clusters,true_cluster_counts))),[]))
+                                         #"%%: [" + ', '.join(['%d/%d'] * len(true_cluster_counts)) + "]") % tuple(new_clusters_splitted[corresponding_true_label] + list(true_clusters) + sum(list(map(list,zip(true_cluster_counts,np.repeat(true_class_size,len(true_cluster_counts))))),[]))
                     else:
                         cluster_title = ("Cluster [" + ', '.join(['%d'] * len(new_clusters_splitted[corresponding_true_label])) + "]" +
                                         "\nTrue Cluster: [" + ', '.join(['%d'] * len(true_clusters)) + "] " +
@@ -273,9 +264,12 @@ def plot_clusters(data, true_labels,labels_k, k_clusters,rows,columns, figsize =
                     topax.plot(np.mean(class_i, axis=0))
                 else:
                     if not n_bursts:
-                        n_bursts = len(class_i)
+                        number_bursts = len(class_i)
 
-                    for burst in class_i[0:n_bursts]:
+                    else:
+                        number_bursts = n_bursts
+
+                    for burst in class_i[0:number_bursts]:
                         topax.plot(burst)
 
                 if y_lim:
@@ -297,9 +291,11 @@ def plot_clusters(data, true_labels,labels_k, k_clusters,rows,columns, figsize =
                     ax.plot(np.mean(class_i, axis=0))
                 else:
                     if not n_bursts:
-                        n_bursts = len(class_i)
+                        number_bursts = len(class_i)
+                    else:
+                        number_bursts = n_bursts
 
-                    for burst in class_i[0:n_bursts]:
+                    for burst in class_i[0:number_bursts]:
                         ax.plot(burst)
 
                 if y_lim:
@@ -326,12 +322,15 @@ def plot_clusters(data, true_labels,labels_k, k_clusters,rows,columns, figsize =
 
             true_clusters = corresponding_true_class_for_prediction[i][0]
             true_cluster_counts = corresponding_true_class_for_prediction[i][1]
-            true_cluster_percents = [true_cluster_counts[i]/len(data[np.where(true_labels == true_cluster)[0]]) for i,true_cluster in enumerate(true_clusters)]
+            true_class_size = [len(data[np.where(true_labels == true_cluster)[0]]) for i,true_cluster in enumerate(true_clusters)]
+            true_cluster_percents = [true_cluster_counts[i]/true_class_size[i] for i,true_cluster in enumerate(true_clusters)]
+
             if len(true_clusters) > 1:
                 if percent_true_cluster:
                     cluster_title = ("Cluster %i \nTrue Cluster: [" + ', '.join(
                                             ['%d'] * len(true_clusters)) + "]" + "\n%%: [" + ', '.join(
                                             ['%.1f'] * len(true_cluster_percents)) + "]") % tuple([i] + list(true_clusters) + list(np.round(np.asarray(true_cluster_percents) * 100, decimals=1)))  # sum(list(map(list,zip(true_clusters,true_cluster_counts))),[]))
+                                     #"\n%%: [" + ', '.join(['%d/%d'] * len(true_cluster_counts)) + "]") % tuple([i] + list(true_clusters) + sum(list(map(list, zip(true_cluster_counts, true_class_size))),[]))
                 else:
                     cluster_title = ("Cluster %i \nTrue Cluster: [" + ', '.join(
                         ['%d'] * len(true_clusters)) + "]" + "\n#: [" + ', '.join(
@@ -342,6 +341,8 @@ def plot_clusters(data, true_labels,labels_k, k_clusters,rows,columns, figsize =
                     cluster_title = ("Cluster %i \nTrue Cluster: [" + ', '.join(
                         ['%d'] * len(true_clusters)) + "] " + "%%: [" + ', '.join(
                         ['%.1f'] * len(true_cluster_percents)) + "]") % tuple([i] + list(true_clusters) + list(np.round(np.asarray(true_cluster_percents) * 100, decimals=1)) ) # sum(list(map(list,zip(true_clusters,true_cluster_counts))),[]))
+                        #"%%: [" + ', '.join(['%d/%d'] * len(true_cluster_counts)) + "]") % tuple([i] + list(true_clusters) + sum(list(map(list, zip(true_cluster_counts, true_class_size))), []))
+
                 else:
                     cluster_title = ("Cluster %i \nTrue Cluster: [" + ', '.join(
                         ['%d'] * len(true_clusters)) + "]" + " #: [" + ', '.join(
@@ -356,40 +357,87 @@ def plot_clusters(data, true_labels,labels_k, k_clusters,rows,columns, figsize =
                 ax.plot(np.mean(class_i, axis = 0))
             else:
                 if not n_bursts:
-                    n_bursts = len(class_i)
+                    number_bursts = len(class_i)
+                else:
+                    number_bursts = n_bursts
 
-                for burst in class_i[0:n_bursts]:
+                for burst in class_i[0:number_bursts]:
                     ax.plot(burst)
 
             if y_lim:
                 ax.set_ylim(y_lim)
 
-
-        #if burst_percent:
-            #ax.set_title(
-            #    "Class %i Mean (%i Bursts = %.2f %%)" % ((i + 1), len(class_i), len(class_i) / len(data) * 100),
-            #    fontsize=12)
-        #else:
-            #ax.set_title("Class %i Mean (%i Bursts )" % ((i + 1), len(class_i)), fontsize=12)
-
-        #plt.tight_layout()
+    #outer_grid.tight_layout(fig)
 
 
+def plot_eigenvalues(eigenvalues,true_cutoff=None,cutoff=None,eigenvalue_range=None, figsize = None, configuration = None):
+    plt.close("all")
+    plt.figure(figsize=figsize)
+    if eigenvalue_range:
+        plt.scatter(range(eigenvalue_range[0]+1,eigenvalue_range[1]+1), eigenvalues[eigenvalue_range[0]:eigenvalue_range[1]])
+        plt.xlim(eigenvalue_range[0],eigenvalue_range[1]+1)
+    else:
+        plt.scatter(range(len(eigenvalues)), eigenvalues)
+
+    if true_cutoff:
+        plt.axhline(eigenvalues[true_cutoff - 1] + (eigval[true_cutoff] - eigval[true_cutoff - 1]) / 2, c="red", linestyle="--",
+                    label="True Eigenvalue Gap: " + str(true_cutoff))
+        plt.xticks([1] + list(plt.xticks()[0][1:]) + [true_cutoff])
+    if cutoff:
+        plt.axhline(eigenvalues[cutoff - 1] + (eigval[cutoff] - eigval[cutoff - 1]) / 2, c="blue", linestyle="--", label="Eigenvalue Gap: " + str(cutoff))
+        plt.xticks([1] + list(plt.xticks()[0][1:]) + [cutoff])
+
+
+    plt.xlabel("Index", fontsize=16, labelpad=10)
+    plt.ylabel("Eigenvalue$_i$", fontsize=16,labelpad=10)
+    if configuration:
+        plt.title("Eigenvalues of Graph Laplacian in ascending order\n\n" + configuration, fontsize=18, pad=15)
+    else:
+        plt.title("Eigenvalues of Graph Laplacian in ascending order", fontsize=20, pad=20)
+    plt.legend(fontsize=14)
 
 
 
 
 
+data_dir = "data/"
+
+data = np.load(data_dir + "F_signal_noise.npy")
+true_labels = np.repeat(range(12), 1000)
+
+seed = np.random.seed(42)
+training_split = list(range(12))
+np.random.shuffle(training_split)
+training_split = np.sort(training_split[:6])
+
+training_set_indices = []
+for i in training_split:
+    training_set_indices += list(range(i*1000,(i+1)*1000))
+training_set_indices = np.asarray(training_set_indices)
+
+training_set = data[training_set_indices]
 
 
-plot_clusters(data, true_labels,labels_k, k_clusters,3,4, figsize = (30,15), percent_true_cluster = True, n_bursts=10, y_lim = (0,16), plot_mean = False, title = None)
-
-_, idx = np.unique(labels_k, return_index=True)
-arrangement = labels_k[np.sort(idx)]
 
 
 
+label_predictions = np.load("Toy_data/Labels/labels_k=10_reg=0.1_training.npy")
+k_clusters = 2
+labels_k = label_predictions[k_clusters-1]
 
-plot_cluster_examples(data, labels_k, k, 3, 4, figsize = (30,25), burst_percent = True, n_bursts=None, y_lim = (0,16),plot_mean=False, arrangement = None, title = None)
 
-plt.close()
+
+columns = 4
+rows = 3
+
+#plot_clusters(training_set, true_labels[training_set_indices],labels_k, k_clusters,rows,columns, figsize = (20,15), percent_true_cluster = False, n_bursts=None, y_lim = (0,16), plot_mean = False, title = "Clusters k=10,$\lambda=0.1$ - Training Set")
+
+
+
+
+
+eigvec = np.load("Toy_data/eigenvectors/eigvec_k=10_reg=0.1.npy")
+eigval = np.load("Toy_data/eigenvalues/eigval_k=10_reg=0.1.npy")
+
+plot_eigenvalues(eigval,true_cutoff=12, cutoff=17,eigenvalue_range=[0,50], figsize = None, configuration="k=10, $\lambda$ = 0.1")
+

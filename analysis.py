@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 data_dir = "data/"
 
-data = np.load(data_dir + "F_signal_noise.npy")
+data = np.load(data_dir + "F_signal_noise_ambiguous.npy")
 true_labels = np.repeat(range(12), 1000)
 
 seed = np.random.seed(42)
@@ -22,9 +22,13 @@ training_set = data[training_set_indices]
 
 n_clusters = range(1,21)
 
-#labels, eigvec, eigval = spectral_clustering(training_set, "euclidean",n_clusters,  k=10, mutual = False, weighting = "distance", normalize = True, reg_lambda = 0.1, save_laplacian = False, save_eigenvalues_and_vectors = False)
+labels, eigvec, eigval = spectral_clustering(training_set, "euclidean",n_clusters,  k=10, mutual = False, weighting = "distance", normalize = True, reg_lambda = 0.1, save_laplacian = False, save_eigenvalues_and_vectors = False)
 
-#np.save("Toy_data/labels/labels_k_10_reg=0.1_training",labels)
+np.save("Toy_data/labels/labels_k_10_reg=0.1_training",labels)
+np.save("Toy_data/eigenvectors/eigvec_k=10_reg=0.1_training",eigvec)
+np.save("Toy_data/eigenvalues/eigval_k=10_reg=0.1_training",eigval)
+
+
 labels = np.load("Toy_data/Labels/labels_k=10_reg=0.1.npy")
 
 
@@ -48,3 +52,7 @@ plt.close()
 
 
 
+
+from sklearn.cluster import KMeans
+kmeans = KMeans(n_clusters=6, random_state=0).fit(training_set)
+k_mean_labels = kmeans.labels_
