@@ -195,6 +195,12 @@ def plot_clusters(data, true_labels,labels_k, k_clusters,rows,columns, figsize =
     merged_classes, new_clusters_merged = get_merged_clusters(corresponding_true_class_for_prediction)
     position_count_for_splitted_classes = np.zeros(len(split_count))
 
+    #print(corresponding_true_class_for_prediction)
+    #print(splitted_classes)
+    #print(new_clusters_splitted)
+    #print(highest_overlap_class_for_prediction)
+
+
     normal_layout = np.arange(rows*columns).reshape((rows,columns))
 
     plt.close("all")
@@ -219,15 +225,14 @@ def plot_clusters(data, true_labels,labels_k, k_clusters,rows,columns, figsize =
             position_count = position_count_for_splitted_classes[np.where(splitted_classes==corresponding_true_label)[0]]
             row_start = int(position_count)
 
-
-
             if position_count == 0: # first plot of splitted cluster
                 true_clusters = corresponding_true_class_for_prediction[i][0]
                 true_cluster_counts = []
                 true_cluster_percents = []
 
                 for new_cluster_splitted in new_clusters_splitted[corresponding_true_label]:
-                    true_cluster_count = corresponding_true_class_for_prediction[new_cluster_splitted][1]
+                    true_cluster_count = highest_overlap_class_for_prediction[new_cluster_splitted][1]
+                    #true_cluster_count = corresponding_true_class_for_prediction[new_cluster_splitted][1]
                     true_cluster_percents += [true_cluster_count/true_class_size]
                     true_cluster_counts += [true_cluster_count]
 
@@ -380,11 +385,11 @@ def plot_eigenvalues(eigenvalues,true_cutoff=None,cutoff=None,eigenvalue_range=N
         plt.scatter(range(len(eigenvalues)), eigenvalues)
 
     if true_cutoff:
-        plt.axhline(eigenvalues[true_cutoff - 1] + (eigval[true_cutoff] - eigval[true_cutoff - 1]) / 2, c="red", linestyle="--",
+        plt.axhline(eigenvalues[true_cutoff - 1] + (eigenvalues[true_cutoff] - eigenvalues[true_cutoff - 1]) / 2, c="red", linestyle="--",
                     label="True Eigenvalue Gap: " + str(true_cutoff))
         plt.xticks([1] + list(plt.xticks()[0][1:]) + [true_cutoff])
     if cutoff:
-        plt.axhline(eigenvalues[cutoff - 1] + (eigval[cutoff] - eigval[cutoff - 1]) / 2, c="blue", linestyle="--", label="Eigenvalue Gap: " + str(cutoff))
+        plt.axhline(eigenvalues[cutoff - 1] + (eigenvalues[cutoff] - eigenvalues[cutoff - 1]) / 2, c="blue", linestyle="--", label="Eigenvalue Gap: " + str(cutoff))
         plt.xticks([1] + list(plt.xticks()[0][1:]) + [cutoff])
 
 
@@ -395,49 +400,4 @@ def plot_eigenvalues(eigenvalues,true_cutoff=None,cutoff=None,eigenvalue_range=N
     else:
         plt.title("Eigenvalues of Graph Laplacian in ascending order", fontsize=20, pad=20)
     plt.legend(fontsize=14)
-
-
-
-
-
-data_dir = "data/"
-
-data = np.load(data_dir + "F_signal_noise.npy")
-true_labels = np.repeat(range(12), 1000)
-
-seed = np.random.seed(42)
-training_split = list(range(12))
-np.random.shuffle(training_split)
-training_split = np.sort(training_split[:6])
-
-training_set_indices = []
-for i in training_split:
-    training_set_indices += list(range(i*1000,(i+1)*1000))
-training_set_indices = np.asarray(training_set_indices)
-
-training_set = data[training_set_indices]
-
-
-
-
-
-label_predictions = np.load("Toy_data/Labels/labels_k=10_reg=0.1_training.npy")
-k_clusters = 2
-labels_k = label_predictions[k_clusters-1]
-
-
-
-columns = 4
-rows = 3
-
-#plot_clusters(training_set, true_labels[training_set_indices],labels_k, k_clusters,rows,columns, figsize = (20,15), percent_true_cluster = False, n_bursts=None, y_lim = (0,16), plot_mean = False, title = "Clusters k=10,$\lambda=0.1$ - Training Set")
-
-
-
-
-
-eigvec = np.load("Toy_data/eigenvectors/eigvec_k=10_reg=0.1.npy")
-eigval = np.load("Toy_data/eigenvalues/eigval_k=10_reg=0.1.npy")
-
-plot_eigenvalues(eigval,true_cutoff=12, cutoff=17,eigenvalue_range=[0,50], figsize = None, configuration="k=10, $\lambda$ = 0.1")
 

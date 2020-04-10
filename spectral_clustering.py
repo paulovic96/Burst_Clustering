@@ -67,13 +67,15 @@ def construct_knn_graph(matrix,sorted_indices,k=10, mutual = False, weighting = 
     return A
 
 
-def calculate_normalized_laplacian(A, normalize = True, reg_lambda = 0.1 , saving = False, saving_file = "data/L_norm"):
+def calculate_normalized_laplacian(A, normalize = True, reg_lambda = 0.1,use_lambda_heuristic = False, saving_lambda_file = "data/quin_rohe_heuristic_lambda",   saving = False, saving_file = "data/L_norm"):
     """ Calculate the normalized graph Laplacian for given KNN-Graph
 
     Args:
         A (nd.array): Adjacency Matrix of a knn-Graph
         normalize(bool): Wether to normalize Laplacian
         reg_lambda (int): hyperparameter for regularization strength
+        use_lambda_heuristic (bool): apply Qin Rohe heuristic for lambda
+        saving_lambda_file:  File name for saving
         saving (bool): True if you want to save matrices for each folds
         saving_name (str): File name for saving
     Returns:
@@ -85,10 +87,21 @@ def calculate_normalized_laplacian(A, normalize = True, reg_lambda = 0.1 , savin
 
     # calcualte normalized Laplacian
     n = A.shape[0] # get number of data points in KNN-Graph
+    if use_lambda_heuristic:
+        test = np.sum(A,axis = 1)
+        #print(test.shape)
+        #print(test)
+        reg_lambda = np.mean(np.sum(A,axis = 1)) # Tai Qin and Karl Rohe. 2013 heuristic
+        print("Use Qin & Rohe heuristic for regularizaton!")
+        np.save(saving_lambda_file, reg_lambda)
+
     if reg_lambda:
+        print("Apply regularization!")
+        print("lamda = %.4f" % reg_lambda)
         A = A + (reg_lambda/n * np.ones((n,n))) # apply regularization [Zhang and Rohe, 2018]
 
     D = np.sum(A,axis = 1) # get vertices degree
+
     D_inv_sqrt = np.reciprocal(np.sqrt(D))
     D_inv_sqrt[np.where(np.isinf(D_inv_sqrt))] = 0 #division by zero
     D = np.diag(D)
@@ -158,7 +171,7 @@ def cluster_eigenvector_embedding(eigenvec, n_cluster):
     return labels
 
 
-def spectral_clustering(data, metric, n_clusters,  k=5, mutual = False, weighting = None, normalize = True, reg_lambda = 0.1, save_laplacian = False, save_eigenvalues_and_vectors = False):
+def spectral_clustering(data, metric, n_clusters,  k=5, mutual = False, weighting = None, normalize = True, use_lambda_heuristic = False, reg_lambda = 0.1, saving_lambda_file= "data/quin_rohe_heuristic_lambda",save_laplacian = False, save_eigenvalues_and_vectors = False):
     """ Cluster data into n_clusters using spectral clustering  based on eigenvectors of knn-graph laplacian
 
     Args:
@@ -171,6 +184,8 @@ def spectral_clustering(data, metric, n_clusters,  k=5, mutual = False, weightin
         weighting (str): indicate wether matrix contains of similarities or distances
 
         normalize(bool): Wether to normalize Laplacian
+        use_lambda_heuristic (bool): apply Qin Rohe heuristic for lambda
+        saving_lambda_file:  File name for saving
         reg_lambda (int): hyperparameter for regularization strength
 
         save_laplacian (bool): True if you want to save Laplacian
@@ -185,7 +200,7 @@ def spectral_clustering(data, metric, n_clusters,  k=5, mutual = False, weightin
 
     A = construct_knn_graph(dist_matrix,sorted_dist_matrix,k=k, mutual = mutual, weighting = weighting)
 
-    L = calculate_normalized_laplacian(A, normalize = normalize, reg_lambda = reg_lambda , saving = save_laplacian, saving_file = "data/L_norm")
+    L = calculate_normalized_laplacian(A, normalize = normalize, reg_lambda=reg_lambda, use_lambda_heuristic=use_lambda_heuristic, saving_lambda_file=saving_lambda_file, saving = save_laplacian, saving_file = "data/L_norm")
 
     eigvec, eigval = calculate_eigenvectors_and_values(L, saving = save_eigenvalues_and_vectors, saving_file= "data/")
 
