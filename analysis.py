@@ -95,32 +95,39 @@ else:
 
 
 
-functions_for_plotting.plot_eigenvalues(eigval,true_cutoff=21, cutoff=12,eigenvalue_range=[0,50], figsize = None, configuration="k=%d, $\lambda$ = %s" % (k, str(reg)))
+functions_for_plotting.plot_eigenvalues(eigval,true_cutoff=21, cutoff=18,eigenvalue_range=[0,50], figsize = None, configuration="k=%d, $\lambda$ = %s" % (k, str(reg)))
 
 
 true_labels = true_labels_ambiguous
-k_clusters = 21
+k_clusters = 18
 labels_k = label_predictions[k_clusters-1]
-n_bursts = None
+n_bursts = 100
 
 columns = 4
 rows = 6
 
+true_clusters = False
 training = False
-mean = True
+mean = False
 
 if heuristic:
     title = "Clusters k=%d,$\lambda=%.4f$" % (k, reg)
     title += "(Quin-Rohe heuristic)"
 else:
-    title = "Clusters k=%d,$\lambda=%s$" % (k, str(reg))
+    if true_clusters:
+        title = "True Clusters"
+        labels_k = true_labels
+    else:
+        title = "Clusters k=%d,$\lambda=%s$" % (k, str(reg))
 if mean:
     title += " (Mean)"
 if training:
     title += " -T raining Set"
+
+
 print(title)
 
-functions_for_plotting.plot_clusters(data,true_labels, labels_k, k_clusters,rows,columns, figsize = (20,20), percent_true_cluster = False, n_bursts=n_bursts, y_lim = (0,16), plot_mean = mean, title = title, subplot_adjustments = [0.05,0.95,-0.1,0.9,0.4, 0.15])
+functions_for_plotting.plot_clusters(data,true_labels, labels_k, k_clusters,rows,columns, figsize = (20,20), percent_true_cluster = False, n_bursts=n_bursts, y_lim = (0,16), plot_mean = mean, title = title, subplot_adjustments = [0.05,0.95,0.03,0.9,0.4, 0.15])
 
 
 

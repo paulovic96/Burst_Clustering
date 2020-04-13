@@ -194,7 +194,7 @@ def plot_clusters(data, true_labels,labels_k, k_clusters,rows,columns, figsize =
     splitted_classes, split_count, new_clusters_splitted = get_splitted_clusters(highest_overlap_class_for_prediction)
     merged_classes, new_clusters_merged = get_merged_clusters(corresponding_true_class_for_prediction)
     position_count_for_splitted_classes = np.zeros(len(split_count))
-    already_plotted_true_clusters = []
+    empty_true_clusters = list(np.unique(true_labels))
 
     normal_layout = np.arange(rows*columns).reshape((rows,columns))
 
@@ -220,8 +220,6 @@ def plot_clusters(data, true_labels,labels_k, k_clusters,rows,columns, figsize =
             inner_grid = matplotlib.gridspec.GridSpecFromSubplotSpec(splitted_into, 1, subplot_spec=outer_grid[corresponding_row,corresponding_column], wspace=0.0, hspace=0.0) # inner grid for splitted clusters
             position_count = position_count_for_splitted_classes[np.where(splitted_classes==corresponding_true_label)[0]] # get stacked position in inner grid
             row_start = int(position_count)
-
-
 
 
             if position_count == 0: # first plot of splitted cluster
@@ -258,13 +256,13 @@ def plot_clusters(data, true_labels,labels_k, k_clusters,rows,columns, figsize =
                     topax.plot(np.mean(class_i, axis=0))
                 else:
                     if not n_bursts:
-                        number_bursts = len(class_i)
+                        step = 1
 
                     else:
-                        number_bursts = n_bursts
+                        step = int(np.ceil(len(class_i)/n_bursts))
 
-                    for burst in class_i[0:number_bursts]:
-                        topax.plot(burst)
+                    for burst in class_i[::step]:
+                        topax.plot(burst,rasterized=True)
 
                 if y_lim:
                     topax.set_ylim(y_lim)
@@ -282,20 +280,22 @@ def plot_clusters(data, true_labels,labels_k, k_clusters,rows,columns, figsize =
                     ax.set_xlabel("Time")
 
                 if plot_mean:
-                    ax.plot(np.mean(class_i, axis=0))
+                    ax.plot(np.mean(class_i, axis=0),rasterized=True)
                 else:
                     if not n_bursts:
-                        number_bursts = len(class_i)
+                        step = 1
                     else:
-                        number_bursts = n_bursts
+                        step = int(np.ceil(len(class_i)/n_bursts))
 
-                    for burst in class_i[0:number_bursts]:
-                        ax.plot(burst)
+                    for burst in class_i[::step]:
+                        ax.plot(burst,rasterized=True)
 
                 if y_lim:
                     ax.set_ylim(y_lim)
             position_count_for_splitted_classes[np.where(splitted_classes == corresponding_true_label)[0]] += 1
-            already_plotted_true_clusters.append(corresponding_true_label)
+            if corresponding_true_label in empty_true_clusters:
+                empty_true_clusters.remove(corresponding_true_label)
+
         else:
             row_start = corresponding_row
             row_end = int(corresponding_row + 1)
@@ -304,7 +304,7 @@ def plot_clusters(data, true_labels,labels_k, k_clusters,rows,columns, figsize =
                 corresponding_merged_true_clusters = list(merged_classes[np.where(new_clusters_merged == i)[0]][0])
                 corresponding_merged_true_clusters.remove(corresponding_true_label)
                 for merged_class in corresponding_merged_true_clusters:
-                    if merged_class not in already_plotted_true_clusters:
+                    if merged_class in empty_true_clusters:
                         row_i = int(np.where(normal_layout == merged_class)[0][0])
                         column_i =  int(np.where(normal_layout == merged_class)[1][0])
                         ax = fig.add_subplot(outer_grid[row_i:(row_i + 1), column_i])
@@ -350,20 +350,23 @@ def plot_clusters(data, true_labels,labels_k, k_clusters,rows,columns, figsize =
 
 
             if plot_mean:
-                ax.plot(np.mean(class_i, axis = 0))
+                ax.plot(np.mean(class_i, axis = 0), rasterized=True)
             else:
                 if not n_bursts:
-                    number_bursts = len(class_i)
+                    step = 1
                 else:
-                    number_bursts = n_bursts
+                    step = int(np.ceil(len(class_i)/n_bursts))
 
-                for burst in class_i[0:number_bursts]:
-                    ax.plot(burst)
+                for burst in class_i[::step]:
+                    ax.plot(burst,rasterized=True)
 
             if y_lim:
                 ax.set_ylim(y_lim)
 
+            if corresponding_true_label in empty_true_clusters:
+                empty_true_clusters.remove(corresponding_true_label)
     plt.savefig("test.pdf")
+    plt.close()
     #outer_grid.tight_layout(fig)
 
 
