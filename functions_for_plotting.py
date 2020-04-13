@@ -189,74 +189,63 @@ def get_new_layout(k_clusters, rows, columns, splitted_classes, split_count):
 
 
 
-def plot_clusters(data, true_labels,labels_k, k_clusters,rows,columns, figsize = None, percent_true_cluster = False, n_bursts=None, y_lim = None, plot_mean = False, title = None):
+def plot_clusters(data, true_labels,labels_k, k_clusters,rows,columns, figsize = None, percent_true_cluster = False, n_bursts=None, y_lim = None, plot_mean = False, title = None, subplot_adjustments = [0.05,0.95,-0.1,0.9,0.4, 0.15]):
     corresponding_true_class_for_prediction, highest_overlap_class_for_prediction = get_true_label_mapping(true_labels, labels_k)
     splitted_classes, split_count, new_clusters_splitted = get_splitted_clusters(highest_overlap_class_for_prediction)
     merged_classes, new_clusters_merged = get_merged_clusters(corresponding_true_class_for_prediction)
     position_count_for_splitted_classes = np.zeros(len(split_count))
-
-    #print(corresponding_true_class_for_prediction)
-    #print(splitted_classes)
-    #print(new_clusters_splitted)
-    #print(highest_overlap_class_for_prediction)
-
+    already_plotted_true_clusters = []
 
     normal_layout = np.arange(rows*columns).reshape((rows,columns))
 
+    # Figure adjustments
     plt.close("all")
     fig = plt.figure(figsize=figsize)
     if title:
         fig.suptitle(title, fontsize=16)
-
-    fig.subplots_adjust(left = 0.05, right=0.95,bottom=0.05,hspace=0.75, wspace=0.15)
+    fig.subplots_adjust(left=subplot_adjustments[0], right=subplot_adjustments[1], bottom=subplot_adjustments[2],top=subplot_adjustments[3], hspace=subplot_adjustments[4], wspace=subplot_adjustments[5])
+    # Outer Grid
     outer_grid = matplotlib.gridspec.GridSpec(rows, columns)
 
+    # iterate over predicted labels
     for i in np.unique(labels_k):
-        class_i = data[np.where(labels_k == i)]
-        corresponding_true_label = highest_overlap_class_for_prediction[i][0] # get true label and also position
-        corresponding_column = int(np.where(normal_layout == corresponding_true_label)[1][0])
-        corresponding_row = int(np.where(normal_layout == corresponding_true_label)[0][0]) #* rows_per_layout_rows)
-
+        class_i = data[np.where(labels_k == i)] # get corresponding data points
+        corresponding_true_label = highest_overlap_class_for_prediction[i][0] # get true label (= position)
+        corresponding_column = int(np.where(normal_layout == corresponding_true_label)[1][0]) # column position
+        corresponding_row = int(np.where(normal_layout == corresponding_true_label)[0][0])  # row position
 
         if corresponding_true_label in splitted_classes:
             true_class_size = len(data[np.where(true_labels == corresponding_true_label)])
             splitted_into = split_count[np.where(splitted_classes==corresponding_true_label)[0]][0]
-            inner_grid = matplotlib.gridspec.GridSpecFromSubplotSpec(splitted_into, 1, subplot_spec=outer_grid[corresponding_row,corresponding_column], wspace=0.0, hspace=0.0)
-            position_count = position_count_for_splitted_classes[np.where(splitted_classes==corresponding_true_label)[0]]
+            inner_grid = matplotlib.gridspec.GridSpecFromSubplotSpec(splitted_into, 1, subplot_spec=outer_grid[corresponding_row,corresponding_column], wspace=0.0, hspace=0.0) # inner grid for splitted clusters
+            position_count = position_count_for_splitted_classes[np.where(splitted_classes==corresponding_true_label)[0]] # get stacked position in inner grid
             row_start = int(position_count)
 
+
+
+
             if position_count == 0: # first plot of splitted cluster
-                true_clusters = corresponding_true_class_for_prediction[i][0]
+                true_clusters = []
                 true_cluster_counts = []
                 true_cluster_percents = []
 
                 for new_cluster_splitted in new_clusters_splitted[corresponding_true_label]:
-                    true_cluster_count = highest_overlap_class_for_prediction[new_cluster_splitted][1]
-                    #true_cluster_count = corresponding_true_class_for_prediction[new_cluster_splitted][1]
-                    true_cluster_percents += [true_cluster_count/true_class_size]
-                    true_cluster_counts += [true_cluster_count]
+                    true_clusters.append(list(corresponding_true_class_for_prediction[new_cluster_splitted][0]))
+                    true_cluster_count = corresponding_true_class_for_prediction[new_cluster_splitted][1]
+                    true_cluster_percent = list(np.round(true_cluster_count/true_class_size * 100, decimals=1))
+                    true_cluster_percents += [true_cluster_percent]
+                    true_cluster_counts += [list(true_cluster_count)]
 
-                if len(new_clusters_splitted[corresponding_true_label]) > 2:
-                    if percent_true_cluster:
-                        cluster_title = ("Cluster [" + ', '.join(['%d'] * len(new_clusters_splitted[corresponding_true_label])) + "]" +
-                                        "\nTrue Cluster: [" + ', '.join(['%d'] * len(true_clusters)) + "]" +
-                                        "\n%%: [" + ', '.join(['%.1f'] * len(true_cluster_percents)) + "]") % tuple(new_clusters_splitted[corresponding_true_label] + list(true_clusters) + list(np.round(np.asarray(true_cluster_percents) * 100, decimals=1)))  # sum(list(map(list,zip(true_clusters,true_cluster_counts))),[]))
-                                         #"\n%%: [" + ', '.join(['%d/%d'] * len(true_cluster_counts)) + "]") % tuple(
-                            #new_clusters_splitted[corresponding_true_label] + list(true_clusters) + sum(list(map(list,zip(true_cluster_counts,np.repeat(true_class_size, len(true_cluster_counts))))),[]))
-                    else:
-                        cluster_title = ("Cluster [" + ', '.join(['%d'] * len(new_clusters_splitted[corresponding_true_label])) + "]" +
-                                        "\nTrue Cluster: [" + ', '.join(['%d'] * len(true_clusters)) + "]" +
-                                        "\n#: [" + ', '.join(['%d'] * len(true_cluster_counts)) + "]") % tuple(new_clusters_splitted[corresponding_true_label] + list(true_clusters) + list(true_cluster_counts))  # sum(list(map(list,zip(true_clusters,true_cluster_counts))),[]))
+
+                if percent_true_cluster:
+                    cluster_title = ("Cluster [" + ', '.join(['%d'] * len(new_clusters_splitted[corresponding_true_label])) + "]" +
+                                    "\nTrue Cluster: " + ', '.join(['[' + ', '.join(['%d'] * len(x)) +']' for x in true_clusters]) +
+                                    "\n%%: " + ', '.join(['[' + ', '.join(['%.1f'] * len(x)) +']' for x in true_cluster_percents])) % tuple(new_clusters_splitted[corresponding_true_label] + sum(true_clusters,[]) + sum(true_cluster_percents,[]))
                 else:
-                    if percent_true_cluster:
-                        cluster_title = ("Cluster [" + ', '.join(['%d'] * len(new_clusters_splitted[corresponding_true_label])) + "]" +
-                                         "\nTrue Cluster: [" + ', '.join(['%d'] * len(true_clusters)) + "] " +
-                                         "%%: [" + ', '.join(['%.1f'] * len(true_cluster_percents)) + "]") % tuple(new_clusters_splitted[corresponding_true_label] + list(true_clusters) + list(np.round(np.asarray(true_cluster_percents) * 100, decimals=1)))  # sum(list(map(list,zip(true_clusters,true_cluster_counts))),[]))
-                                         #"%%: [" + ', '.join(['%d/%d'] * len(true_cluster_counts)) + "]") % tuple(new_clusters_splitted[corresponding_true_label] + list(true_clusters) + sum(list(map(list,zip(true_cluster_counts,np.repeat(true_class_size,len(true_cluster_counts))))),[]))
-                    else:
-                        cluster_title = ("Cluster [" + ', '.join(['%d'] * len(new_clusters_splitted[corresponding_true_label])) + "]" +
-                                        "\nTrue Cluster: [" + ', '.join(['%d'] * len(true_clusters)) + "] " +
-                                        "#: [" + ', '.join(['%d'] * len(true_cluster_counts)) + "]") % tuple(new_clusters_splitted[corresponding_true_label] + list(true_clusters) + list(true_cluster_counts))  # sum(list(map(list,zip(true_clusters,true_cluster_counts))),[]))
+                    cluster_title = ("Cluster [" + ', '.join(['%d'] * len(new_clusters_splitted[corresponding_true_label])) + "]" +
+                                    "\nTrue Cluster: " + ', '.join(['[' + ', '.join(['%d'] * len(x)) +']' for x in true_clusters]) +
+                                    "\n#:  " + ', '.join(['[' + ', '.join(['%.1f'] * len(x)) +']' for x in true_cluster_counts])) % tuple(new_clusters_splitted[corresponding_true_label] + sum(true_clusters,[]) + sum(true_cluster_counts,[]))
+
             row_end = int(row_start + 1)
 
 
@@ -306,7 +295,7 @@ def plot_clusters(data, true_labels,labels_k, k_clusters,rows,columns, figsize =
                 if y_lim:
                     ax.set_ylim(y_lim)
             position_count_for_splitted_classes[np.where(splitted_classes == corresponding_true_label)[0]] += 1
-
+            already_plotted_true_clusters.append(corresponding_true_label)
         else:
             row_start = corresponding_row
             row_end = int(corresponding_row + 1)
@@ -315,13 +304,15 @@ def plot_clusters(data, true_labels,labels_k, k_clusters,rows,columns, figsize =
                 corresponding_merged_true_clusters = list(merged_classes[np.where(new_clusters_merged == i)[0]][0])
                 corresponding_merged_true_clusters.remove(corresponding_true_label)
                 for merged_class in corresponding_merged_true_clusters:
-                    row_i = int(np.where(normal_layout == merged_class)[0][0])
-                    column_i =  int(np.where(normal_layout == merged_class)[1][0])
-                    ax = fig.add_subplot(outer_grid[row_i:(row_i + 1), column_i])
-                    ax.plot()
-                    ax.set_xticklabels([])
-                    if y_lim:
-                        ax.set_ylim(y_lim)
+                    if merged_class not in already_plotted_true_clusters:
+                        row_i = int(np.where(normal_layout == merged_class)[0][0])
+                        column_i =  int(np.where(normal_layout == merged_class)[1][0])
+                        ax = fig.add_subplot(outer_grid[row_i:(row_i + 1), column_i])
+                        ax.plot()
+                        ax.set_xticklabels([])
+                        ax.set_title("True Cluster: [%d]" % merged_class,loc="left")
+                        if y_lim:
+                            ax.set_ylim(y_lim)
 
             ax = fig.add_subplot(outer_grid[row_start:row_end, corresponding_column])
 
@@ -372,6 +363,7 @@ def plot_clusters(data, true_labels,labels_k, k_clusters,rows,columns, figsize =
             if y_lim:
                 ax.set_ylim(y_lim)
 
+    plt.savefig("test.pdf")
     #outer_grid.tight_layout(fig)
 
 

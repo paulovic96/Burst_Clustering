@@ -74,12 +74,12 @@ is_training = [False, True]
 save_dir = "Toy_data/Ambiguous/Ambiguous_Tau/"
 
 
-cluster_data(data, training_set, n_clusters, k_conditions,reg_conditions, is_training, save_dir)
+#cluster_data(data, training_set, n_clusters, k_conditions,reg_conditions, is_training, save_dir)
 
 
 
 k = 5
-heuristic = True
+heuristic = False
 if heuristic:
     reg = float(np.load(save_dir + "/k=%d_quin_rohe_heuristic_lambda.npy" % k))
     # eigvec = np.load(save_dir + "/eigenvectors/eigvec_k=%d_reg=%s.npy" % k)
@@ -87,7 +87,7 @@ if heuristic:
     label_predictions = np.load(save_dir + "/labels/labels_k=%d_reg=heuristic.npy" % k)
     print("Load labels from: " + save_dir + "/labels/labels_k=%d_reg=heuristic.npy" % k)
 else:
-    reg = 100
+    reg = None
     # eigvec = np.load(save_dir + "/eigenvectors/eigvec_k=%d_reg=%s.npy" % (k,str(reg)))
     eigval = np.load(save_dir + "/eigenvalues/eigval_k=%d_reg=%s.npy" % (k, str(reg)))
     label_predictions = np.load(save_dir + "/labels/labels_k=%d_reg=%s.npy" % (k, str(reg)))
@@ -95,19 +95,19 @@ else:
 
 
 
-functions_for_plotting.plot_eigenvalues(eigval,true_cutoff=21, cutoff=13,eigenvalue_range=[0,50], figsize = None, configuration="k=%d, $\lambda$ = %s" % (k, str(reg)))
+functions_for_plotting.plot_eigenvalues(eigval,true_cutoff=21, cutoff=12,eigenvalue_range=[0,50], figsize = None, configuration="k=%d, $\lambda$ = %s" % (k, str(reg)))
 
 
-
-k_clusters = 2
+true_labels = true_labels_ambiguous
+k_clusters = 21
 labels_k = label_predictions[k_clusters-1]
 n_bursts = None
 
 columns = 4
-rows = 3
+rows = 6
 
 training = False
-mean = False
+mean = True
 
 if heuristic:
     title = "Clusters k=%d,$\lambda=%.4f$" % (k, reg)
@@ -120,5 +120,7 @@ if training:
     title += " -T raining Set"
 print(title)
 
-functions_for_plotting.plot_clusters(data,true_labels, labels_k, k_clusters,rows,columns, figsize = (20,15), percent_true_cluster = False, n_bursts=n_bursts, y_lim = (0,16), plot_mean = mean, title = title)
+functions_for_plotting.plot_clusters(data,true_labels, labels_k, k_clusters,rows,columns, figsize = (20,20), percent_true_cluster = False, n_bursts=n_bursts, y_lim = (0,16), plot_mean = mean, title = title, subplot_adjustments = [0.05,0.95,-0.1,0.9,0.4, 0.15])
+
+
 
