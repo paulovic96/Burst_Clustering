@@ -189,7 +189,7 @@ def get_new_layout(k_clusters, rows, columns, splitted_classes, split_count):
 
 
 
-def plot_clusters(data, true_labels,labels_k, k_clusters,rows,columns, figsize = None, percent_true_cluster = False, n_bursts=None, y_lim = None, plot_mean = False, title = None, subplot_adjustments = [0.05,0.95,-0.1,0.9,0.4, 0.15]):
+def plot_clusters(data, true_labels,labels_k, k_clusters,rows,columns, figsize = None, percent_true_cluster = False, n_bursts=None, y_lim = None, plot_mean = False, title = None, subplot_adjustments = [0.05,0.95,-0.1,0.9,0.4, 0.15], savefile = "test.pdf"):
     corresponding_true_class_for_prediction, highest_overlap_class_for_prediction = get_true_label_mapping(true_labels, labels_k)
     splitted_classes, split_count, new_clusters_splitted = get_splitted_clusters(highest_overlap_class_for_prediction)
     merged_classes, new_clusters_merged = get_merged_clusters(corresponding_true_class_for_prediction)
@@ -365,7 +365,7 @@ def plot_clusters(data, true_labels,labels_k, k_clusters,rows,columns, figsize =
 
             if corresponding_true_label in empty_true_clusters:
                 empty_true_clusters.remove(corresponding_true_label)
-    plt.savefig("test.pdf")
+    plt.savefig(savefile)
     plt.close()
     #outer_grid.tight_layout(fig)
 
