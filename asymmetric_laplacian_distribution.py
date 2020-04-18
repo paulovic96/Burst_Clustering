@@ -50,7 +50,7 @@ def generate_ALD(X, mu, amplitude_condition, time_constant_condition):
         lam = sample_amplitude(5, 7)
 
     elif amplitude_condition == "M/L":
-        lam = sample_amplitude(8, 10)
+        lam = sample_amplitude(8, 11)
 
     elif amplitude_condition == "L":
         lam = sample_amplitude(12, 14)
@@ -58,38 +58,38 @@ def generate_ALD(X, mu, amplitude_condition, time_constant_condition):
         print("Invalid amplitude condition: %s ..." % amplitude_condition)
 
     if time_constant_condition == "equal_sharp":
-        tau1 = sample_tau(lower = 0.02, upper=0.5)
+        tau1 = sample_tau(lower = 0.02, upper=0.5) # tau_large = tau_large
         tau2 = sample_tau(lower = 0.02, upper=0.5)
 
     elif time_constant_condition == "equal_medium":
-        tau1 = sample_tau(lower = 0.003, upper=0.017) #sample_tau(lower=0.007, upper=0.014)
+        tau1 = sample_tau(lower = 0.003, upper=0.017) # tau_medium = tau_medium #sample_tau(lower=0.007, upper=0.014)
         tau2 = sample_tau(lower = 0.003, upper=0.017)
 
     elif time_constant_condition == "equal_wide":
-        tau1 = sample_tau(lower=0.001, upper=0.003)
+        tau1 = sample_tau(lower=0.001, upper=0.003) # tau_small = tau_small
         tau2 = sample_tau(lower=0.001, upper=0.003)
 
-    elif time_constant_condition == "wide_sharp_negative_skew":
+    elif time_constant_condition == "wide_sharp_negative_skew": # tau_small << tau_large
         tau1 = sample_tau(lower=0.001, upper=0.003)
         tau2 = sample_tau(lower = 0.02, upper=0.5)
 
-    elif time_constant_condition == "wide_medium_negative_skew":
+    elif time_constant_condition == "wide_medium_negative_skew": # tau_small < tau_medium
         tau1 = sample_tau(lower=0.001, upper=0.003)
         tau2 = sample_tau(lower = 0.003, upper=0.017) #sample_tau(lower=0.007, upper=0.014)
 
-    elif time_constant_condition == "medium_sharp_negative_skew":
+    elif time_constant_condition == "medium_sharp_negative_skew": # tau_medium < tau_large
         tau1 = sample_tau(lower = 0.003, upper=0.017) #sample_tau(lower=0.007, upper=0.014)
         tau2 = sample_tau(lower=0.02, upper=0.5)
 
-    elif time_constant_condition == "wide_sharp_positive_skew":
+    elif time_constant_condition == "sharp_wide_positive_skew": # tau_large >> tau_small
         tau1 = sample_tau(lower = 0.02, upper=0.5)
         tau2 = sample_tau(lower=0.001, upper=0.003)
 
-    elif time_constant_condition == "wide_medium_positive_skew":
+    elif time_constant_condition == "medium_wide_positive_skew": # tau_medium > tau_small
         tau1 = sample_tau(lower = 0.003, upper=0.017)#sample_tau(lower=0.007, upper=0.014)
         tau2 = sample_tau(lower=0.001, upper=0.003)
 
-    elif time_constant_condition == "medium_sharp_positive_skew":
+    elif time_constant_condition == "sharp_medium_positive_skew": # tau_large > tau_medium
         tau1 = sample_tau(lower=0.02, upper=0.5)
         tau2 = sample_tau(lower = 0.003, upper=0.017) #sample_tau(lower=0.007, upper=0.014)
 
@@ -201,11 +201,11 @@ def main():
     X = np.round(np.linspace(0,3500,3501))
     np.random.seed(42)
 
-    amplitude_conditions = ["S", "M", "L"] #["S", "S/M", "M", "M/L", "L"]
-    time_constant_conditions = ["equal_sharp", "equal_medium", "equal_wide", "wide_sharp_negative_skew", "medium_sharp_negative_skew", "wide_sharp_positive_skew", "medium_sharp_positive_skew"]
-    #["equal_sharp", "equal_medium", "equal_wide", "wide_sharp_negative_skew", "wide_medium_negative_skew","medium_sharp_negative_skew","wide_sharp_positive_skew", "wide_medium_positive_skew" ,"medium_sharp_positive_skew"]
-    ambiguous_conditions = ["equal_medium", "medium_sharp_negative_skew", "medium_sharp_positive_skew"]
-    #["S/M", "M/L", "equal_medium", "wide_medium_negative_skew", "medium_sharp_negative_skew", "wide_medium_positive_skew", "medium_sharp_positive_skew"]
+    amplitude_conditions = ["S", "S/M", "M", "M/L", "L"] #["S", "M", "L"]
+    time_constant_conditions = ["equal_sharp", "equal_medium", "equal_wide", "wide_sharp_negative_skew", "wide_medium_negative_skew","medium_sharp_negative_skew","sharp_wide_positive_skew", "medium_wide_positive_skew" ,"sharp_medium_positive_skew"]
+    # ["equal_sharp", "equal_medium", "equal_wide", "wide_sharp_negative_skew", "medium_sharp_negative_skew", "wide_sharp_positive_skew", "medium_sharp_positive_skew"]
+    ambiguous_conditions = ["S/M", "M/L", "equal_medium", "wide_medium_negative_skew", "medium_sharp_negative_skew", "medium_wide_positive_skew", "sharp_medium_positive_skew"]
+    #["equal_medium", "medium_sharp_negative_skew", "sharp_medium_positive_skew"]
     samples_per_condition = 1000
     samples_per_ambiguous_condition = 400
     mu = 1750
@@ -214,10 +214,10 @@ def main():
     print("Done!")
 
 
-    param_data.to_csv("data/parameter_ambiguous_data",index=False)
+    param_data.to_csv("data/parameter_ambiguous_data_tau_amplitude",index=False)
 
-    np.save('data/F_signal_ambiguous',F_signal)
-    np.save('data/F_signal_noise_ambiguous', F_signal_noise)
+    np.save('data/F_signal_ambiguous_tau_amplitude',F_signal)
+    np.save('data/F_signal_noise_ambiguous_tau_amplitude', F_signal_noise)
 
     class_dict = get_index_per_class(amplitude_conditions, time_constant_conditions, ambiguous_conditions, samples_per_condition, samples_per_ambiguous_condition)
     amplitude_dict = {"S": "Small", "M": "Medium", "S/M": "Small/Medium", "L": "Large", "M/L": "Medium/Large"}
