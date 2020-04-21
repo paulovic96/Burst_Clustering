@@ -25,17 +25,15 @@ def asymmetric_laplace_distribution(x,mu,lam,tau1,tau2):
 
 # tau_small: 0.001 - 0.003 --> wide
 # tau_large: 0.02 - 0.5 --> sharp
-# tau_medium: 0.003 - 0.017 #0.007 - 0.014 --> ambiguous
+# tau_medium: 0.004 - 0.019 --> ambiguous
 
 
 
 def sample_tau(lower, upper):
     return np.random.uniform(lower, upper)
 
-
 def sample_amplitude(lower, upper):
     return np.random.uniform(lower, upper)
-
 
 def generate_ALD(X, mu, amplitude_condition, time_constant_condition):
     V_ald = np.vectorize(asymmetric_laplace_distribution)
@@ -62,8 +60,8 @@ def generate_ALD(X, mu, amplitude_condition, time_constant_condition):
         tau2 = sample_tau(lower = 0.02, upper=0.5)
 
     elif time_constant_condition == "equal_medium":
-        tau1 = sample_tau(lower = 0.003, upper=0.017) # tau_medium = tau_medium #sample_tau(lower=0.007, upper=0.014)
-        tau2 = sample_tau(lower = 0.003, upper=0.017)
+        tau1 = sample_tau(lower = 0.004, upper=0.019) # tau_medium = tau_medium #sample_tau(lower=0.007, upper=0.014)
+        tau2 = sample_tau(lower = 0.004, upper=0.019)
 
     elif time_constant_condition == "equal_wide":
         tau1 = sample_tau(lower=0.001, upper=0.003) # tau_small = tau_small
@@ -75,10 +73,10 @@ def generate_ALD(X, mu, amplitude_condition, time_constant_condition):
 
     elif time_constant_condition == "wide_medium_negative_skew": # tau_small < tau_medium
         tau1 = sample_tau(lower=0.001, upper=0.003)
-        tau2 = sample_tau(lower = 0.003, upper=0.017) #sample_tau(lower=0.007, upper=0.014)
+        tau2 = sample_tau(lower = 0.004, upper=0.019) #sample_tau(lower=0.007, upper=0.014)
 
     elif time_constant_condition == "medium_sharp_negative_skew": # tau_medium < tau_large
-        tau1 = sample_tau(lower = 0.003, upper=0.017) #sample_tau(lower=0.007, upper=0.014)
+        tau1 = sample_tau(lower = 0.004, upper=0.019) #sample_tau(lower=0.007, upper=0.014)
         tau2 = sample_tau(lower=0.02, upper=0.5)
 
     elif time_constant_condition == "sharp_wide_positive_skew": # tau_large >> tau_small
@@ -86,12 +84,12 @@ def generate_ALD(X, mu, amplitude_condition, time_constant_condition):
         tau2 = sample_tau(lower=0.001, upper=0.003)
 
     elif time_constant_condition == "medium_wide_positive_skew": # tau_medium > tau_small
-        tau1 = sample_tau(lower = 0.003, upper=0.017)#sample_tau(lower=0.007, upper=0.014)
+        tau1 = sample_tau(lower = 0.004, upper=0.019)#sample_tau(lower=0.007, upper=0.014)
         tau2 = sample_tau(lower=0.001, upper=0.003)
 
     elif time_constant_condition == "sharp_medium_positive_skew": # tau_large > tau_medium
         tau1 = sample_tau(lower=0.02, upper=0.5)
-        tau2 = sample_tau(lower = 0.003, upper=0.017) #sample_tau(lower=0.007, upper=0.014)
+        tau2 = sample_tau(lower = 0.004, upper=0.019) #sample_tau(lower=0.007, upper=0.014)
 
     else:
         print("Invalid time_constant condition: %s ..." % time_constant_condition)
@@ -145,7 +143,7 @@ def generate_ALD_data(X, amplitude_conditions, time_constant_conditions, ambiguo
 
 
                 F_signal.append(f_i)
-                F_signal_noise.append(f_i+noise)
+                F_signal_noise.append((f_i+noise).clip(0)) # no negative spike counts
                 noises.append(noise)
                 tau1s.append(tau1)
                 tau2s.append(tau2)
@@ -167,10 +165,10 @@ def get_index_per_class(amplitude_conditions,time_constant_conditions, ambiguous
         for time_constant_condition in time_constant_conditions:
             condition = amplitude_condition + "-" + time_constant_condition
             if amplitude_condition in ambiguous_conditions or time_constant_condition in ambiguous_conditions:
-                class_dict[condition] = [current_index, current_index + samples_for_ambiguous]
+                class_dict[condition] = [current_index, current_index + samples_for_ambiguous-1]
                 current_index += samples_for_ambiguous
             else:
-                class_dict[condition] = [current_index, current_index + samples_per_condition]
+                class_dict[condition] = [current_index, current_index + samples_per_condition-1]
                 current_index += samples_per_condition
     return class_dict
 
@@ -194,6 +192,18 @@ def get_labels(data, cluster_dict,ambiguous_conditions,true_clusters_starting_po
                 true_cluster += 1
                 true_labels_ambiguous[cluster_dict[key][0]:cluster_dict[key][1]] = true_cluster
     return true_labels_ambiguous
+
+def get_amplitude_and_time_condtion_from_condition_string(condition_string):
+    conditions = condition_string.split("/")
+    if len(conditions) > 2:
+        amplitude = "/".join(conditions[0:2])
+    else:
+        amplitude = conditions[0]
+
+    time_condition = conditions[-1]
+    return [amplitude, time_condition]
+
+
 
 
 def main():

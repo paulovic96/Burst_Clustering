@@ -5,6 +5,7 @@ import sklearn
 import scipy
 from sklearn.metrics import pairwise_distances
 from sklearn.cluster import KMeans
+from sklearn.decomposition import TruncatedSVD
 
 
 def calculate_dist_matrix(data, metric):
@@ -22,6 +23,47 @@ def calculate_dist_matrix(data, metric):
     sorted_dist_matrix = np.argsort(dist_matrix, axis=1)
 
     return dist_matrix, sorted_dist_matrix
+
+
+def get_global_scaling_parameter(data):
+    svd = TruncatedSVD(100 ,random_state=42)
+    projection = svd.fit_transform(data)
+
+    w = svd.explained_variance_ratio_
+    v = svd.explained_variance_
+
+    for i in range(100):
+        sigma_sqr = np.sum((w * v)[:i]) / np.sum(w[:i])
+        if sigma_sqr > 0.95:
+            break
+    return sigma_sqr
+
+def get_local_scaling_parameter(data,dist_matrix, sorted_dist_matrix, k = 7):
+    local_sigmas = np.zeros(len(data))
+    for i in range(len(data)):
+        kth_nn = sorted_dist_matrix[i,k]
+        local_sigmas[i] = dist_matrix[i,kth_nn]
+    return local_sigmas
+
+
+
+def get_local_scaled_affinity_matrix(data, metric="euclidean", k=7):
+    dist_matrix, sorted_dist_matrix = calculate_dist_matrix(data, metric=metric)
+    local_sigmas = get_local_scaling_parameter(data,dist_matrix, sorted_dist_matrix, k = k)
+
+    A = np.zeros(dist_matrix.shape)
+
+    for i in range(len(data)):
+        A[i] = np.exp(-(dist_matrix[i])/(local_sigmas[i] * local_sigmas))
+    np.fill_diagonal(A, 0)
+
+    sorted_indices = np.argsort(A, axis=1)
+
+    return A, sorted_indices
+
+
+
+
 
 def construct_knn_graph(matrix,sorted_indices,k=10, mutual = False, weighting = None):
     """ Constuct KNN Graph from distance/similarity matrix
@@ -196,7 +238,11 @@ def spectral_clustering(data, metric, n_clusters,  k=5, mutual = False, weightin
         labels_per_n_clusters (lists of list): list of lists containing the cluster labels for each point in data set
     """
 
-    dist_matrix, sorted_dist_matrix = calculate_dist_matrix(data, metric)
+
+    if metric == "local_scaled_affinity":
+        dist_matrix, sorted_dist_matrix = get_local_scaled_affinity_matrix(data,k=7)
+    else:
+        dist_matrix, sorted_dist_matrix = calculate_dist_matrix(data, metric)
 
     A = construct_knn_graph(dist_matrix,sorted_dist_matrix,k=k, mutual = mutual, weighting = weighting)
 
@@ -210,4 +256,3 @@ def spectral_clustering(data, metric, n_clusters,  k=5, mutual = False, weightin
         labels_per_n_clusters.append(labels)
 
     return labels_per_n_clusters, eigvec, eigval
-
