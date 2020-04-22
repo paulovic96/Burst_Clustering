@@ -76,9 +76,6 @@ def main():
 
     true_labels_ambiguous = get_labels_by_layout(data,cluster_dict, list(cluster_dict.keys()), 9, layout_per_condition=(2,5))
 
-    functions_for_plotting.plot_clusters(data, true_labels_ambiguous, true_labels_ambiguous, 45, 10, 5, figsize=(30,25),
-                                         percent_true_cluster=False, n_bursts=100, y_lim=(0, 16), plot_mean=True,
-                                         title="True Clusters Ambiguous Tau + Amplitude (Mean)", subplot_adjustments=[0.05,0.95,0.03,0.93,0.8,0.3], savefile="clusters_ambiguous_tau_amplitude_mean.pdf")
 
     #training_set, training_set_indices = training_set_split.get_training_set(data, 12, 1000, 0.5)
     #training_set, training_set_indices, training_set_conditions = training_set_split.get_training_set_for_ambiguous_data(data, cluster_dict, ambiguous_conditions, ambiguous_tau = True, ambiguous_amplitude = False, proportion=0.5)
@@ -88,12 +85,17 @@ def main():
     #n_clusters = range(1,21)
     n_clusters = range(1, 50)
     k_conditions = [5, 10]
-    reg_conditions = [None, 0.01, 0.1, 1]#, 5, 10, 20, 50, 100]
-    is_training = [False]#[False, True]
-    save_dir = "Toy_data/Ambiguous/Ambiguous_Tau_manhattan/"
+    reg_conditions = [None, 0.01, 0.1, 1, 5, 10, 20, 50, 100]
+    is_training = [False, True]
+    save_dir = "Toy_data/Ambiguous/Ambiguous_Tau_Amplitude/"
 
 
-    cluster_data(data, training_set, n_clusters, k_conditions,reg_conditions, is_training, save_dir)
+    train_fold_indices, train_fold_indices = training_set_split.get_training_folds(data, cluster_dict)
+
+    training_set = data[train_fold_indices[0]]
+    validation_set = data[train_fold_indices[1]]
+
+    cluster_data(validation_set, training_set, n_clusters,"euclidean", k_conditions,reg_conditions, is_training, save_dir)
 
 if __name__== "__main__":
   main()

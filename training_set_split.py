@@ -62,3 +62,39 @@ def get_training_set_for_ambiguous_data(data, cluster_dict, ambiguous_conditions
     return training_set, training_set_indices, training_set_conditions
 
 
+def get_training_folds(data, cluster_dict, cluster_wise=True,folds = 2):
+    train_fold_indices = []
+    valid_fold_indices = []
+    if cluster_wise:
+        for i in range(folds - 1):
+            valid_fold = []
+            train_fold = []
+            for cluster, start_end_point in cluster_dict.items():
+                cluster_indices = np.arange(start_end_point[0], start_end_point[1] + 1)
+                fold_length =int(len(cluster_indices)/folds)
+
+                valid_fold += [cluster_indices[i * fold_length:(i + 1) * fold_length]]
+                train_fold += [np.delete(cluster_indices, range(i * fold_length, (i + 1) * fold_length), axis=0)]
+
+            valid_fold = np.concatenate(valid_fold).ravel()
+            train_fold = np.concatenate(train_fold).ravel()
+
+            train_fold_indices += [train_fold]
+            valid_fold_indices += [valid_fold]
+
+        valid_fold = []
+        train_fold = []
+        for cluster, start_end_point in cluster_dict.items():
+            cluster_indices = np.arange(start_end_point[0], start_end_point[1] + 1)
+            fold_length = int(len(cluster_indices) / folds)
+
+            valid_fold += [cluster_indices[(folds - 1) * fold_length:]]
+            train_fold += [np.delete(cluster_indices, range((folds - 1) * fold_length, len(cluster_indices)), axis=0)]
+
+        valid_fold = np.concatenate(valid_fold).ravel()
+        train_fold = np.concatenate(train_fold).ravel()
+
+        train_fold_indices += [train_fold]
+        valid_fold_indices += [valid_fold]
+
+    return train_fold_indices, valid_fold_indices
