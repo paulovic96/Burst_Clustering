@@ -4,55 +4,6 @@ import matplotlib
 from matplotlib import pyplot as plt
 from matplotlib import cm
 import seaborn as sns
-import pandas as pd
-from asymmetric_laplacian_distribution import get_amplitude_and_time_condtion_from_condition_string
-
-
-
-def plot_cluster_examples(data, labels, k_clusters,rows,columns, figsize = (30,25), burst_percent = False, n_bursts=None, y_lim = None, plot_mean = False, arrangement = None, title = None):
-    if k_clusters < 10:
-        colors = ["C" + str(i) for i in range(k_clusters)]
-    else:
-        colors = cm.rainbow(np.linspace(0, 1, k_clusters))
-
-    fig = plt.figure(figsize=figsize)
-    fig.subplots_adjust(hspace=0.4, wspace=0.4)
-    if title:
-        fig.suptitle(title, fontsize=16)
-
-    for i in range(k_clusters):
-        if arrangement is None:
-            class_i = data[np.where(labels == i)]
-        else:
-            class_i = data[np.where(labels == arrangement[i])]
-        #class_i = np.random.permutation(class_i)
-        ax = fig.add_subplot(rows, columns, i+1)
-        ax.set_xlabel("Time", fontsize = 12)
-        if plot_mean:
-            if burst_percent:
-                ax.set_title("Class %i Mean (%i Bursts = %.2f %%)" % ((i + 1), len(class_i), len(class_i) / len(data) * 100),
-                             fontsize=12)
-            else:
-                ax.set_title("Class %i Mean (%i Bursts )" % ((i + 1), len(class_i)), fontsize=12)
-
-            ax.plot(np.mean(class_i, axis = 0))
-
-        else:
-            if burst_percent:
-                ax.set_title("Class %i (%i Bursts = %.2f %%)" % ((i+1),len(class_i), len(class_i)/len(data) * 100), fontsize = 12)
-            else:
-                ax.set_title("Class %i (%i Bursts )" % ((i+1),len(class_i)), fontsize = 12)
-
-            if not n_bursts:
-                n_bursts = len(class_i)
-
-            for burst in class_i[0:n_bursts]:
-                ax.plot(burst)
-
-        if y_lim:
-            ax.set_ylim(y_lim)
-
-
 
 
 def plot_cluster_distribution(data, labels, k_clusters,rows, columns, figsize = (30,25), y_lim = None, arrangement = None):
@@ -192,7 +143,7 @@ def get_new_layout(k_clusters, rows, columns, splitted_classes, split_count):
 
 
 
-def plot_clusters(data, true_labels,labels_k, k_clusters,rows,columns, figsize = None, percent_true_cluster = False, n_bursts=None, y_lim = None, plot_mean = False, title = None, subplot_adjustments = [0.05,0.95,-0.1,0.9,0.4, 0.15], savefile = "test.pdf"):
+def plot_clusters(data, true_labels,labels_k, k_clusters,rows,columns, figsize = None, percent_true_cluster = False, n_bursts=None, y_lim = None, plot_mean = False, title = None, subplot_adjustments = [0.05,0.95,0.03,0.9,0.4, 0.15], savefile = "test.pdf"):
     corresponding_true_class_for_prediction, highest_overlap_class_for_prediction = get_true_label_mapping(true_labels, labels_k)
     splitted_classes, split_count, new_clusters_splitted = get_splitted_clusters(highest_overlap_class_for_prediction)
     merged_classes, new_clusters_merged = get_merged_clusters(corresponding_true_class_for_prediction)
@@ -653,14 +604,11 @@ def plot_number_burst_with_low_prediction_strength_per_k(k_low_individual_per_cl
     ax.set_xlim((k_clusters[0], k_clusters[-1] + 2))
 
 
-def plot_parameter_space(parameter_df,animate = False, color_dict = None, labels_dict = None):
-    condition_splitted = parameter_df.Condition.apply(get_amplitude_and_time_condtion_from_condition_string)
-    condition_splitted = np.matrix(condition_splitted.tolist())
-    parameter_df[['Amplitude_Condition', 'Time_Condition']] = condition_splitted
-    condition_groups = parameter_df.groupby(['Amplitude_Condition', 'Time_Condition'])
+def plot_parameter_space(parameter_df, color_dict = None, time_condition_labels_dict = None):
+    condition_groups = parameter_df.groupby(['amplitude_condition', 'time_constant_condition'])
 
-    amplitude_conditions = np.unique(parameter_df.Amplitude_Condition)
-    time_constant_conditions = np.unique(parameter_df.Time_Condition)
+    amplitude_conditions = np.unique(parameter_df.amplitude_condition)
+    time_constant_conditions = np.unique(parameter_df.time_constant_condition)
 
 
     if color_dict:
@@ -680,10 +628,11 @@ def plot_parameter_space(parameter_df,animate = False, color_dict = None, labels
         color_dict = {}
         for i,key in enumerate(time_constant_conditions):
             color_dict[key] = color_pallets[i]
-    if labels_dict:
+
+    if time_condition_labels_dict:
         print("Use provided label for time conditions!")
     else:
-        labels_dict = {"equal_sharp": "tau1≈tau2 (large)", "equal_medium": "tau1≈tau2 (medium)", "equal_wide":"tau1≈tau2 (small)", "wide_sharp_negative_skew": "tau1<<tau2 (small<<large)", "wide_medium_negative_skew": "tau1<tau2 (small<<medium)", "medium_sharp_negative_skew": "tau1<tau2 (medium<large)", "sharp_wide_positive_skew":"tau1>>tau2 (large>>small)", "medium_wide_positive_skew":"tau1>tau2 (medium>small)", "sharp_medium_positive_skew":"tau1>tau2 (large>medium)"}
+        time_condition_labels_dict = {"equal_sharp": "tau1≈tau2 (large)", "equal_medium": "tau1≈tau2 (medium)", "equal_wide":"tau1≈tau2 (small)", "wide_sharp_negative_skew": "tau1<<tau2 (small<<large)", "wide_medium_negative_skew": "tau1<tau2 (small<<medium)", "medium_sharp_negative_skew": "tau1<tau2 (medium<large)", "sharp_wide_positive_skew":"tau1>>tau2 (large>>small)", "medium_wide_positive_skew":"tau1>tau2 (medium>small)", "sharp_medium_positive_skew":"tau1>tau2 (large>medium)"}
 
     plt.close("all")
     fig = plt.figure()
@@ -695,56 +644,17 @@ def plot_parameter_space(parameter_df,animate = False, color_dict = None, labels
         color = color_palette[amplitude_idx]
         color = np.array(color)/255
         if amplitude_idx == 3:
-            ax.scatter(np.log(group['Tau1']), np.log(group['Tau2']), group['Lambda'], label=labels_dict[name[0]], color = color)
+            ax.scatter(np.log(group['Tau1']), np.log(group['Tau2']), group['Lambda'], label=time_condition_labels_dict[name[0]], color = color)
         else:
             ax.scatter(np.log(group['Tau1']), np.log(group['Tau2']), group['Lambda'], color=color)
 
     handles, labels = ax.get_legend_handles_labels()
     sorted_handles = []
-    for i in list(labels_dict.values()):
+    for i in list(time_condition_labels_dict.values()):
         np.where(np.asarray(labels) == i)
         sorted_handles.append(handles[np.where(np.asarray(labels) == i)[0][0]])
-    ax.legend(sorted_handles,labels_dict.values(),ncol=3)
+    ax.legend(sorted_handles,time_condition_labels_dict.values(),ncol=3)
     ax.set_xlabel("Log(tau1)")
     ax.set_ylabel("Log(tau2)")
     ax.set_zlabel("Amplitude")
 
-
-
-"""
-from mpl_toolkits.mplot3d import Axes3D
-from matplotlib import animation
-fig = plt.figure()
-ax = Axes3D(fig)
-
-
-def init():
-    for name, group in condition_groups:
-        color_palette = color_dict[name[0]]
-        amplitude_idx = np.where(np.asarray(amplitude_conditions) == name[1])[0][0]
-        color = color_palette[amplitude_idx]
-        color = np.array(color) / 255
-        if amplitude_idx == 3:
-            ax.scatter(np.log(group['Tau1']), np.log(group['Tau2']), group['Lambda'], label=labels_dict[name[0]],
-                       color=color)
-        else:
-            ax.scatter(np.log(group['Tau1']), np.log(group['Tau2']), group['Lambda'], color=color)
-
-        ax.set_xlabel("Log(tau1)")
-        ax.set_ylabel("Log(tau2)")
-        ax.set_zlabel("Amplitude")
-
-    return fig,
-
-def animate(i):
-    ax.view_init(elev=10., azim=i)
-    return fig,
-
-# Animate
-anim = animation.FuncAnimation(fig, animate, init_func=init, frames=360, interval=20, blit=True)
-# Save
-anim.save('basic_animation.mp4', fps=30, extra_args=['-vcodec', 'libx264'])
-data_dir = "data/"
-data_param = pd.read_csv(data_dir + "parameter_ambiguous_data_tau_amplitude")
-
-"""
