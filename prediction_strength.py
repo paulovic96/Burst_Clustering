@@ -307,9 +307,18 @@ for i,labels in enumerate(training_set_labels):
 prediction_strengths, cluster_sizes = get_prediction_strength_per_k(data, train_fold_indices[0], train_fold_indices[1], train_labels, valid_labels, per_sample = False)
 
 import functions_for_plotting
+import importlib
+importlib.reload(functions_for_plotting)
 
-true_labels = np.repeat(np.arange(0,12), 500)
+#true_labels = np.repeat(np.arange(0,12), 500)
 
-functions_for_plotting.plot_clusters(training_set, true_labels,train_labels[12], 12, 3,4, figsize=(20,20),n_bursts = 100,y_lim = (0,14))
+#functions_for_plotting.plot_clusters(training_set, true_labels,train_labels[12], 12, 3,4, figsize=(20,20),n_bursts = 100,y_lim = (0,14))
+test = {}
+test_sizes = {}
+for key in prediction_strengths.keys():
+    if key <= 20:
+        test[key] = np.amin(prediction_strengths[key])
+        test_sizes[key] = cluster_sizes[key]
 
-functions_for_plotting.plot_mean_prediction_strengths(prediction_strengths, cluster_sizes,threshold=None, figsize = (40, 5), size_weighted=False,title = "")
+plt.close("all")
+functions_for_plotting.plot_mean_prediction_strengths(test, test_sizes,threshold=None, size_weighted=True,title = "")

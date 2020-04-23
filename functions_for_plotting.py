@@ -5,7 +5,6 @@ from matplotlib import pyplot as plt
 from matplotlib import cm
 import seaborn as sns
 
-
 def plot_cluster_distribution(data, labels, k_clusters,rows, columns, figsize = (30,25), y_lim = None, arrangement = None):
     fig = plt.figure(figsize=figsize)
 
@@ -357,7 +356,7 @@ def plot_eigenvalues(eigenvalues,true_cutoff=None,cutoff=None,eigenvalue_range=N
 
 
 
-def plot_prediction_strength(k_predictions_strengths, cluster_sizes_per_k, color=sns.color_palette('Reds', 25, )[::-1], k_clusters=None, threshold=None, figsize = (30, 16), title = "Prediction Strength"):
+def plot_prediction_strength(k_predictions_strengths, cluster_sizes_per_k, color=sns.color_palette('Reds', 25, )[::-1], k_clusters=None, threshold=None, figsize = None, title = "Prediction Strength"):
     """Plot prediction strength per cluster found by clusterings with differnt number of clusters k
     Args:
         k_predictions_strengths (dict): dictionary containing the prediction strength for each cluster by clustering with k-clusters.
@@ -431,12 +430,12 @@ def plot_prediction_strength(k_predictions_strengths, cluster_sizes_per_k, color
 
 
 
-def plot_mean_prediction_strengths(k_prediction_strengths,cluster_sizes_per_k,threshold, size_weighted=False,figsize = (50, 20), title=""):
+def plot_mean_prediction_strengths(k_prediction_strengths,cluster_sizes_per_k,threshold, size_weighted=False,figsize = None, title="",plot_adjustments = [0.05,0.08,0.95, 0.93]):
     """
 
     k_prediction_strengths (dict): dictionary containing the prediction strength for each cluster by clustering with k-clusters.
                                           key = k (number of clusters in clustering)
-                                          value =   _clusters (prediction strenght of each individual cluster)
+                                          value =   _clusters (prediction strength of each individual cluster)
     threshold (float): prediction strength threshold to mark in plot
 
     returns:
@@ -456,10 +455,16 @@ def plot_mean_prediction_strengths(k_prediction_strengths,cluster_sizes_per_k,th
             mean_prediction_strengths.append(np.mean(k_prediction_strengths[k]))
             err_prediction_strengths.append(np.std(k_prediction_strengths[k]))
 
-    ax.errorbar(k_clusters, mean_prediction_strengths, yerr=err_prediction_strengths)
+
+    upper_err = np.asarray(err_prediction_strengths) - np.maximum(0,(np.asarray(err_prediction_strengths)+np.asarray(mean_prediction_strengths)-1))
+    lower_err = np.asarray(err_prediction_strengths)
+    err = np.stack((lower_err,upper_err), axis=0)
+
+    ax.plot(k_clusters, mean_prediction_strengths, "o")
+    ax.errorbar(k_clusters, mean_prediction_strengths, yerr=err,fmt='-',ecolor='lightgray', elinewidth=3,)
 
     for i, k in enumerate(k_clusters):
-        ax.annotate("%.2f" % (mean_prediction_strengths[i]), (k + 0.01, mean_prediction_strengths[i] + 0.01))
+        ax.annotate("%.2f" % (mean_prediction_strengths[i]), (k-0.25, 1.05),fontsize = 12)
 
     if threshold:
         ax.axhline(threshold, color="red", label="Threshold")
@@ -474,9 +479,18 @@ def plot_mean_prediction_strengths(k_prediction_strengths,cluster_sizes_per_k,th
             title = "Mean Prediction Strength for Clustering with k Clusters"
         ax.set_title(title, fontsize=25, pad=10)
     ax.set_xticks(k_clusters)
-    ax.set_xlabel("Number of clusters", fontsize=14)
-    ax.set_ylabel("prediction strength", fontsize=14)
+    ax.set_xlabel("Number of clusters", fontsize=16, labelpad=10)
+    ax.set_ylabel("prediction strength", fontsize=16, labelpad=10),
     ax.set_ylim((0, 1.1))
+
+    ax.set_yticks(np.arange(0, 1.1,0.1))
+    left = plot_adjustments[0]
+    bottom = plot_adjustments[1]
+    right = plot_adjustments[2]
+    top = plot_adjustments[3]
+
+    plt.subplots_adjust(left,bottom,right, top)
+
     #ax.legend(fontsize = 14)
 
 
