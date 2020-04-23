@@ -63,7 +63,7 @@ def get_labels_by_layout(data,cluster_dict, cluster_order, clusters_per_conditio
 
 data_dir = "data/"
 
-data = np.load(data_dir + "F_signal_noise_ambiguous_tau_amplitude.npy")
+data = np.load(data_dir + "ambiguous_data_tau_amplitude_F_signal_noise.npy")
 
 amplitude_conditions = ["S", "S/M", "M", "M/L", "L"]
 time_constant_conditions = ["equal_sharp", "equal_medium", "equal_wide", "wide_sharp_negative_skew", "wide_medium_negative_skew","medium_sharp_negative_skew","sharp_wide_positive_skew", "medium_wide_positive_skew" ,"sharp_medium_positive_skew"]
@@ -81,7 +81,7 @@ n_clusters = range(1, 50)
 k_conditions = [5, 10]
 reg_conditions = [None, 0.01, 0.1, 1, 5, 10, 20, 50, 100]
 is_training = [False, True]
-save_dir = "Toy_data/Ambiguous/Ambiguous_Tau_Amplitude/"
+save_dir = "Toy_data/Ambiguous/Ambiguous_Tau_Amplitude/Prediction_Strength/"
 
 
 train_fold_indices, train_fold_indices = training_set_split.get_training_folds(data, cluster_dict)

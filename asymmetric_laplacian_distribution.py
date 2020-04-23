@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 SAVE_DIR = "data"
+SAVE_FILE_NAME = "clearly_separated_data"
 
 
 # Amplitudes
@@ -223,10 +224,10 @@ def main():
     F_signal, F_signal_noise, noises, param_data = generate_ALD_data(X, AMPLITUDE_CONDITIONS, TIME_CONSTANT_CONDITIONS, AMBIGUOUS_CONDITIONS, SAMPLES_PER_CONDITION,SAMPLES_PER_AMBIGUOUS_CONDITION,MU)
     print("Done!")
 
-    param_data.to_csv(SAVE_DIR +"/parameter_ambiguous_data_tau_amplitude.csv",index=False)
+    param_data.to_csv(SAVE_DIR +"/" + SAVE_FILE_NAME + "_parameter" + ".csv",index=False)
 
-    np.save(SAVE_DIR + '/F_signal_ambiguous_tau_amplitude',F_signal)
-    np.save(SAVE_DIR + '/F_signal_noise_ambiguous_tau_amplitude', F_signal_noise)
+    np.save(SAVE_DIR + "/" + SAVE_FILE_NAME + "_F_signal",F_signal)
+    np.save(SAVE_DIR + "/" + SAVE_FILE_NAME + "_F_signal_noise", F_signal_noise)
 
     """
     class_dict = get_index_per_class(AMPLITUDE_CONDITIONS, TIME_CONSTANT_CONDITIONS, AMBIGUOUS_CONDITIONS, SAMPLES_PER_CONDITION, SAMPLES_PER_AMBIGUOUS_CONDITION)
