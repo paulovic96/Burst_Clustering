@@ -220,7 +220,10 @@ def get_points_in_clusters_below_and_above_threshold(data, predictions_strengths
     high_predictive_points_in_clusters_per_k = {}
 
     low_predictive_points_labels_per_k = {}
+    low_ps_per_sample_per_k = {}
+
     high_predictive_points_labels_per_k = {}
+    high_ps_per_sample_per_k = {}
 
     for k in k_clusters:
         predictions_strengths_per_sample = predictions_strengths_per_sample_per_k[k]
@@ -232,7 +235,9 @@ def get_points_in_clusters_below_and_above_threshold(data, predictions_strengths
         high_individual_in_clusters_k = []
 
         low_individual_labels_k = np.zeros(len(data)) - 1
+        low_individual_ps_k = np.zeros(len(data)) - 1
         high_individual_labels_k = np.zeros(len(data)) - 1
+        high_individual_ps_k = np.zeros(len(data)) - 1
 
         for i in range(k):
             cluster_i_ps_per_sample = np.asarray(predictions_strengths_per_sample[i])
@@ -248,8 +253,10 @@ def get_points_in_clusters_below_and_above_threshold(data, predictions_strengths
             high_individual_in_clusters_k += list(high_predictive_points)
 
             low_individual_labels_k[low_predictive_points] = i
-            high_individual_labels_k[high_predictive_points] = i
 
+            low_individual_ps_k[low_predictive_points] = cluster_i_ps_per_sample[low_points_indices_in_cluster]
+            high_individual_labels_k[high_predictive_points] = i
+            high_individual_ps_k[high_predictive_points] = np.delete(cluster_i_ps_per_sample, low_points_indices_in_cluster)
 
 
         low_predictive_points_in_clusters_per_k[k] = np.sort(low_individual_in_clusters_k)
@@ -259,9 +266,12 @@ def get_points_in_clusters_below_and_above_threshold(data, predictions_strengths
         high_predictive_points_in_clusters_per_k[k] = np.sort(high_individual_in_clusters_k)
 
         low_predictive_points_labels_per_k[k] = list(filter(lambda x: x != -1, low_individual_labels_k))
+        low_ps_per_sample_per_k[k] = list(filter(lambda x: x != -1, low_individual_ps_k))
         high_predictive_points_labels_per_k[k] = list(filter(lambda x: x != -1, high_individual_labels_k))
+        high_ps_per_sample_per_k[k] = list(filter(lambda x: x != -1, high_individual_ps_k))
 
-    return low_predictive_points_in_clusters_per_k, low_predictive_points_in_clusters_per_k_sizes, low_predictive_points_in_clusters_per_k_percent, low_predictive_points_labels_per_k, high_predictive_points_in_clusters_per_k, high_predictive_points_labels_per_k
+
+    return low_predictive_points_in_clusters_per_k, low_predictive_points_in_clusters_per_k_sizes, low_predictive_points_in_clusters_per_k_percent, low_predictive_points_labels_per_k,low_ps_per_sample_per_k, high_predictive_points_in_clusters_per_k, high_predictive_points_labels_per_k, high_ps_per_sample_per_k
 
 
 

@@ -599,62 +599,72 @@ def plot_number_bursts_in_low_clusters_per_k(k_low_cluster_sizes, n_total,thresh
     top = plot_adjustments[3]
     plt.subplots_adjust(left, bottom, right, top)
 
-def plot_number_burst_with_low_prediction_strength_per_k(k_low_individual_per_cluster,n_total,threshold, plot_proportion=False,plot_mean=False, figsize=(30, 16)):
+def plot_number_burst_with_low_prediction_strength_per_k(k_low_individual_per_cluster,k_low_individual_ps_per_cluster,n_total,threshold, plot_proportion=False,plot_mean_low_ps = True, figsize=None,plot_adjustments = [0.05,0.08,0.95, 0.93]):
     fig, ax = plt.subplots(figsize=figsize)
 
     k_clusters = list(k_low_individual_per_cluster.keys())
 
     k_low_bursts = []
-    k_low_bursts_err = []
 
     for k in k_clusters:
-        if plot_mean:
-            low_bursts = np.mean(k_low_individual_per_cluster[k])
-            k_low_bursts_err = np.std(k_low_individual_per_cluster[k])
-            if np.isnan(low_bursts):
-                low_bursts = np.nan_to_num(0)
-        else:
-            low_bursts = np.sum(k_low_individual_per_cluster[k])
-            k_low_bursts_err = 0
+        low_bursts = np.sum(k_low_individual_per_cluster[k])
+        k_low_bursts_err = 0
         if plot_proportion:
             low_bursts = low_bursts/n_total * 100
-            k_low_bursts_err = k_low_bursts_err/n_total * 100
 
         k_low_bursts.append(low_bursts)
-        k_low_bursts_err.append(k_low_bursts_err)
 
 
-    if plot_mean:
-        ax.plot(k_clusters, k_low_bursts, "o")
-        ax.errorbar(k_clusters, k_low_bursts, yerr=k_low_bursts_err, fmt='-', ecolor='lightgray', elinewidth=3)
-    else:
-        ax.plot(k_clusters, k_low_bursts, marker="o", markersize=15)
+
+    ax.plot(k_clusters, k_low_bursts, marker="o", linestyle='dashed', markersize=15,color = "C0")
 
     for i, p in enumerate(k_low_bursts):
         if plot_proportion:
-            ax.annotate("%.2f%%" % np.around(p, decimals=2), (k_clusters[i] + 0.1, k_low_bursts[i] + 0.1), fontsize=15)
+            ax.annotate("%.2f%%" % np.around(p, decimals=2), (k_clusters[i] - 0.4, k_low_bursts[i] + 100*0.04),color = "C0")
         else:
-            ax.annotate("#%d%" % int(p), (k_clusters[i] + 0.1, k_low_bursts[i] + 0.1), fontsize=15)
+            ax.annotate("#%d" % int(p), (k_clusters[i] - 0.4, k_low_bursts[i] + n_total*0.033),color="C0")
 
     title = ""
-    if plot_mean:
-        title += "Mean "
     if plot_proportion:
         title += "Proportion of Bursts with individual Prediction Strength below threshold= %.2f" % threshold
     else:
-        if plot_mean:
-            title += "Number of Bursts with individual Prediction Strength below threshold= %.2f" % threshold
-        else:
-            title += "Total Number of Bursts with individual Prediction Strength below threshold= %.2f" % threshold
+        title += "Total Number of Bursts with individual Prediction Strength below threshold= %.2f" % threshold
 
-    ax.set_title(title, fontsize=25)
+    ax.set_title(title, fontsize=25, pad=10)
     ax.set_xticks(k_clusters)
     ax.set_xlabel("Number of clusters", fontsize=14)
     if plot_proportion:
         ax.set_ylabel("% Bursts", fontsize=14)
+        ax.set_ylim((0, 110))
     else:
         ax.set_ylabel("# Bursts", fontsize=14)
+        ax.set_ylim((0, n_total))
     ax.set_xlim((k_clusters[0], k_clusters[-1] + 2))
+    ax.tick_params(axis='y', labelcolor="C0")
+
+    if plot_mean_low_ps:
+        ax2 = ax.twinx()
+        ax2.set_ylabel('Mean PS for bursts below threshold', fontsize=14, color="C3")
+        mean_ps = [np.nan_to_num(np.mean(np.asarray(k_low_individual_ps_per_cluster[k]))) for k in k_clusters]
+        ax2.plot(k_clusters, mean_ps, marker="v", linestyle='dashed', markersize=15, color="C3")
+        for i,p in enumerate(mean_ps):
+            ax2.annotate("%.2f" % np.around(p, decimals=2), (k_clusters[i] - 0.4, mean_ps[i] + 1 * 0.04),color="C3")
+        ax2.tick_params(axis='y', labelcolor="C3")
+        ax2.set_ylim((0, 1))
+    else:
+        ax2 = ax.twinx()
+        ax2.set_ylabel('#Clusters with bursts below threshold', fontsize=14, color="C3")
+        n_low_clusters = [np.sum(np.asarray(k_low_individual_per_cluster[k])>0) for k in k_clusters]
+        ax2.plot(k_clusters, n_low_clusters, marker="v", linestyle='dashed', markersize=15, color="C3")
+        ax2.tick_params(axis='y', labelcolor="C3")
+        ax2.set_ylim((0, max(n_low_clusters) + 1))
+
+
+    left = plot_adjustments[0]
+    bottom = plot_adjustments[1]
+    right = plot_adjustments[2]
+    top = plot_adjustments[3]
+    plt.subplots_adjust(left, bottom, right, top)
 
 
 def plot_parameter_space(parameter_df, color_dict = None, time_condition_labels_dict = None):

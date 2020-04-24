@@ -143,7 +143,7 @@ for key in prediction_strengths.keys():
 
 importlib.reload(prediction_strength)
 #low_clusters, low_cluster_sizes, low_cluster_sizes_percent = prediction_strength.get_clusters_below_threshold(test, test_sizes, 0.8)
-low_points_in_clusters, low_points_in_clusters_sizes, low_points_in_clusters_percent, low_points_labels, high_points_in_clusters, high_points_labels = prediction_strength.get_points_in_clusters_below_and_above_threshold(data,test_per_sample, train_fold_indices[1], valid_labels, 0.7)
+low_points_in_clusters, low_points_in_clusters_sizes, low_points_in_clusters_percent, low_points_labels, low_ps_per_sample_per_k, high_points_in_clusters, high_points_labels, high_ps_per_sample_per_k = prediction_strength.get_points_in_clusters_below_and_above_threshold(data,test_per_sample, train_fold_indices[1], valid_labels, 0.9)
 
 
 
@@ -156,8 +156,8 @@ plt.close("all")
 #functions_for_plotting.plot_mean_prediction_strengths(test, test_sizes,threshold=None,title = "")
 importlib.reload(functions_for_plotting)
 plt.close("all")
-functions_for_plotting.plot_number_bursts_in_low_clusters_per_k(low_cluster_sizes, 6000, 0.8, plot_proportion = False)
 
+functions_for_plotting.plot_number_burst_with_low_prediction_strength_per_k(low_points_in_clusters_sizes,low_ps_per_sample_per_k,6000,0.5, plot_proportion=False, plot_mean_low_ps = True)
 
 #functions_for_plotting.plot_prediction_strength(test,test_sizes)
 
