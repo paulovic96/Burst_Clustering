@@ -193,26 +193,32 @@ def get_index_per_class(amplitude_conditions,time_constant_conditions, ambiguous
                 current_index += samples_per_condition
     return class_dict
 
-def get_labels(data, cluster_dict,ambiguous_conditions,true_clusters_starting_point = 0, new_clusters_amplitude_starting_point = 27, new_clusters_tau_starting_point = 12):
-    true_labels_ambiguous = np.zeros(len(data))
 
-    true_cluster = true_clusters_starting_point -1
-    new_clusters_amplitude = new_clusters_amplitude_starting_point - 1 # new amplitude + normal and new tau: 18
-    new_clusters_tau = new_clusters_tau_starting_point - 1 # new tau + amplitude: 15
-    for key in cluster_dict.keys():
-        amplitude, time_course = key.split("-")
-        if amplitude in ambiguous_conditions:
-            new_clusters_amplitude += 1
-            true_labels_ambiguous[cluster_dict[key][0]:cluster_dict[key][1]] = new_clusters_amplitude
+def get_labels(data,cluster_dict, cluster_order = None):
+    if not cluster_order:
+        cluster_order = list(cluster_dict.keys())
 
+    labels = np.zeros(len(data))
+    for i, key in enumerate(cluster_order):
+        labels[cluster_dict[key][0]:cluster_dict[key][1] + 1] = i
+    return labels
+
+def labels_to_layout_mapping(k_cluster_labels_ordered, clusters_per_condition_for_layout, layout_per_condition):
+    layout_label_mapping = {}
+    shift_needed_to_stay_in_layout = layout_per_condition[0] * layout_per_condition[1] - clusters_per_condition_for_layout
+
+    label = 0
+    for i in k_cluster_labels_ordered:
+        if i == 0:
+            layout_label_mapping[i] = label
         else:
-            if time_course in ambiguous_conditions:
-                new_clusters_tau += 1
-                true_labels_ambiguous[cluster_dict[key][0]:cluster_dict[key][1]] = new_clusters_tau
+            if i % clusters_per_condition_for_layout == 0:
+                label += (1 + shift_needed_to_stay_in_layout)
             else:
-                true_cluster += 1
-                true_labels_ambiguous[cluster_dict[key][0]:cluster_dict[key][1]] = true_cluster
-    return true_labels_ambiguous
+                label += 1
+
+            layout_label_mapping[i] = label
+    return layout_label_mapping
 
 
 

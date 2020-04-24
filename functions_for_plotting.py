@@ -142,7 +142,7 @@ def get_new_layout(k_clusters, rows, columns, splitted_classes, split_count):
 
 
 
-def plot_clusters(data, true_labels,labels_k, k_clusters,rows,columns, figsize = (20,20), percent_true_cluster = False, n_bursts=None, y_lim = None, plot_mean = False, title = None, subplot_adjustments = [0.05,0.95,0.03,0.9,0.4, 0.15], savefile = "test.pdf"):
+def plot_clusters(data, true_labels,labels_k,rows,columns, layout_label_mapping, figsize = (20,20), percent_true_cluster = False, n_bursts=None, y_lim = None, plot_mean = False, title = None, subplot_adjustments = [0.05,0.95,0.03,0.9,0.4, 0.15], savefile = "test.pdf"):
     corresponding_true_class_for_prediction, highest_overlap_class_for_prediction = get_true_label_mapping(true_labels, labels_k)
     splitted_classes, split_count, new_clusters_splitted = get_splitted_clusters(highest_overlap_class_for_prediction)
     merged_classes, new_clusters_merged = get_merged_clusters(corresponding_true_class_for_prediction)
@@ -150,6 +150,11 @@ def plot_clusters(data, true_labels,labels_k, k_clusters,rows,columns, figsize =
     empty_true_clusters = list(np.unique(true_labels))
 
     normal_layout = np.arange(rows*columns).reshape((rows,columns))
+
+    if not layout_label_mapping:
+        layout_label_mapping = {}
+        for i in np.unique(true_labels):
+            layout_label_mapping[i] = i
 
     # Figure adjustments
     plt.close("all")
@@ -165,8 +170,9 @@ def plot_clusters(data, true_labels,labels_k, k_clusters,rows,columns, figsize =
     for i in np.unique(labels_k):
         class_i = data[np.where(labels_k == i)] # get corresponding data points
         corresponding_true_label = highest_overlap_class_for_prediction[i][0] # get true label (= position)
-        corresponding_column = int(np.where(normal_layout == corresponding_true_label)[1][0]) # column position
-        corresponding_row = int(np.where(normal_layout == corresponding_true_label)[0][0])  # row position
+        layout_label = layout_label_mapping[corresponding_true_label]
+        corresponding_column = int(np.where(normal_layout == layout_label)[1][0]) # column position
+        corresponding_row = int(np.where(normal_layout == layout_label)[0][0])  # row position
 
         if corresponding_true_label in splitted_classes:
             true_class_size = len(data[np.where(true_labels == corresponding_true_label)])
@@ -356,7 +362,7 @@ def plot_eigenvalues(eigenvalues,true_cutoff=None,cutoff=None,eigenvalue_range=N
 
 
 
-def plot_prediction_strength(k_predictions_strengths, cluster_sizes_per_k, color=sns.color_palette('Reds', 25, )[::-1], k_clusters=None, threshold=None, figsize = None, title = "Prediction Strength"):
+def plot_prediction_strength(k_predictions_strengths, cluster_sizes_per_k,strength_sorted=True,color=sns.color_palette('Reds', 25, )[::-1], k_clusters=None, threshold=None, figsize = None, title = "Prediction Strength",plot_adjustments = [0.05,0.08,0.95, 0.93]):
     """Plot prediction strength per cluster found by clusterings with differnt number of clusters k
     Args:
         k_predictions_strengths (dict): dictionary containing the prediction strength for each cluster by clustering with k-clusters.
@@ -382,34 +388,69 @@ def plot_prediction_strength(k_predictions_strengths, cluster_sizes_per_k, color
     for k in k_clusters:
         clusters = range(1, k + 1)  # clusters in clustering_k
         ax_clusters = max(ax_clusters, k +1)  # update maximal number of clusters for plotting
+
+
         if len(k_predictions_strengths[k]) > 0:
-            ax.plot(clusters, k_predictions_strengths[k], color=color[k], label=k)  # plot prediction strenght per cluster for clustering with k clusters
-            ax.scatter(clusters, k_predictions_strengths[k], color=color[k], s=10000 * np.asarray(cluster_sizes_per_k[k])/ np.sum(cluster_sizes_per_k[k]))  # add points with size corresponding to percent of bursts falling into cluster (cluster size)
-            ax.annotate(str(k), (clusters[k-1] - 0.1, k_predictions_strengths[k][-1] - 0.04),fontsize=12)  # annotate line with k used in clustering
+            prediction_strength = k_predictions_strengths[k]
+            cluster_sizes = cluster_sizes_per_k[k]
+
+            if strength_sorted:
+                strength_and_size = list(zip(np.round(prediction_strength, 2), cluster_sizes))
+                strength_and_size = sorted(strength_and_size, key=lambda e: (e[0], e[1]), reverse=True)
+
+                prediction_strength = np.asarray(strength_and_size)[:, 0]
+                cluster_sizes = np.asarray(strength_and_size)[:, 1]
 
 
-    leg1 = ax.legend(fontsize=12, loc="lower left")  # add legend for lines
+            ax.plot(clusters, prediction_strength, color=color[k], label=k)  # plot prediction strenght per cluster for clustering with k clusters
+            ax.scatter(clusters, prediction_strength, color=color[k], s=10000 * np.asarray(cluster_sizes)/ np.sum(cluster_sizes))  # add points with size corresponding to percent of bursts falling into cluster (cluster size)
+            ax.annotate(str(k), (clusters[k-1] - 0.1, prediction_strength[-1] - 0.04),fontsize=10)  # annotate line with k used in clustering
+
+
+    leg1 = ax.legend(fontsize=12, ncol=int(len(k_clusters)/2), loc="lower left")  # add legend for lines
 
     color_index = len(color) // 2
 
     # add legend for point size indicating cluster size
 
     l1 = ax.scatter([], [], s=10000 * 0.01, edgecolors='none',color=color[color_index])  # point size corresponding to 1%
-    l2 = ax.scatter([], [], s=10000 * 0.03, edgecolors='none', color=color[color_index])  # 3%
+    #l2 = ax.scatter([], [], s=10000 * 0.03, edgecolors='none', color=color[color_index])  # 3%
     l3 = ax.scatter([], [], s=10000 * 0.05, edgecolors='none', color=color[color_index])  # 5%
     l4 = ax.scatter([], [], s=10000 * 0.10, edgecolors='none', color=color[color_index])  # 10%
     l5 = ax.scatter([], [], s=10000 * 0.25, edgecolors='none', color=color[color_index])  # 25%
     l6 = ax.scatter([], [], s=10000 * 0.50, edgecolors='none', color=color[color_index])  # 50
-    l7 = ax.scatter([], [], s=10000 * 0.75, edgecolors='none', color=color[color_index])  # 75%
+    #l7 = ax.scatter([], [], s=10000 * 0.75, edgecolors='none', color=color[color_index])  # 75%
     l8 = ax.scatter([], [], s=10000 * 0.90, edgecolors='none', color=color[color_index])  # 90%
 
-    labels = ["1%", "3%", "5%", "10%", "25%", "50%", "75%", "90%"]
-    leg2 = ax.legend([l1, l2, l3, l4, l5, l6, l7, l8], labels, ncol=4, title="Cluster Size (%) ", fontsize=15,
-                     loc="upper right", borderpad=3, scatterpoints=1, columnspacing=2.5, labelspacing=5.5,
-                     handletextpad=2.5)
+    labels = ["1%", "5%", "10%", "25%", "50%", "90%"]
+    leg2 = ax.legend([l1, l3, l4], labels[0:3], ncol=1, title="Cluster Size (%) ", fontsize=12,
+                     loc = "upper right", borderpad=1, scatterpoints=1, columnspacing=0, labelspacing=2,
+                     handletextpad=3.5,frameon=False)
+    plt.setp(leg2.get_title(), fontsize=15)
+    leg3 = ax.legend([l5, l6, l8], labels[3:], ncol=1, title="", fontsize=12,
+                    loc = "lower right", borderpad=4, scatterpoints=1, columnspacing=0,labelspacing=6,
+                     handletextpad=3.5,frameon=False)
+
+    bb2 = leg2.get_bbox_to_anchor().inverse_transformed(ax.transAxes)
+    bb3 = leg3.get_bbox_to_anchor().inverse_transformed(ax.transAxes)
+
+    # Change to location of the legend.
+
+    bb2.x0 += 0.065
+    bb2.x1 += 0.065
+    bb3.x0 += 0.085
+    bb3.x1 += 0.085
+
+    bb2.y0 -= 0.07
+    bb2.y1 -= 0.07
+    bb3.y0 += 0.14
+    bb3.y1 += 0.14
+
+    leg2.set_bbox_to_anchor(bb2, transform=ax.transAxes)
+    leg3.set_bbox_to_anchor(bb3, transform=ax.transAxes)
 
 
-    ax.set_title(title, fontsize=25)
+    ax.set_title(title, fontsize=25, pad=10)
 
     ax.set_xticks(range(1, ax_clusters + 1))
     ax.set_xlabel("Number of clusters", fontsize=14)
@@ -424,13 +465,20 @@ def plot_prediction_strength(k_predictions_strengths, cluster_sizes_per_k, color
     yticks[-1].label1.set_visible(False)
 
     ax.add_artist(leg1)
+    ax.add_artist(leg2)
     # ax.set_ylim ((-19, 0.5))
     # ax.set_yticks(range(0, -19, -1))
     # ax.set_yticklabels(range(2,21))
+    left = plot_adjustments[0]
+    bottom = plot_adjustments[1]
+    right = plot_adjustments[2]
+    top = plot_adjustments[3]
+
+    plt.subplots_adjust(left, bottom, right, top)
+    ax.spines["right"].set_visible(False)
 
 
-
-def plot_mean_prediction_strengths(k_prediction_strengths,cluster_sizes_per_k,threshold, size_weighted=False,figsize = None, title="",plot_adjustments = [0.05,0.08,0.95, 0.93]):
+def plot_mean_prediction_strengths(k_prediction_strengths,cluster_sizes_per_k,threshold,figsize = None, title="",plot_adjustments = [0.05,0.08,0.95, 0.93]):
     """
 
     k_prediction_strengths (dict): dictionary containing the prediction strength for each cluster by clustering with k-clusters.
@@ -448,12 +496,8 @@ def plot_mean_prediction_strengths(k_prediction_strengths,cluster_sizes_per_k,th
     err_prediction_strengths = []
 
     for k in k_clusters:
-        if size_weighted:
-            mean_prediction_strengths.append(np.mean(np.asarray(k_prediction_strengths[k]) * np.asarray(cluster_sizes_per_k[k])/np.asarray(cluster_sizes_per_k[k])))
-            err_prediction_strengths.append(np.std(np.asarray(k_prediction_strengths[k]) * np.asarray(cluster_sizes_per_k[k])/np.asarray(cluster_sizes_per_k[k])))
-        else:
-            mean_prediction_strengths.append(np.mean(k_prediction_strengths[k]))
-            err_prediction_strengths.append(np.std(k_prediction_strengths[k]))
+        mean_prediction_strengths.append(np.mean(k_prediction_strengths[k]))
+        err_prediction_strengths.append(np.std(k_prediction_strengths[k]))
 
 
     upper_err = np.asarray(err_prediction_strengths) - np.maximum(0,(np.asarray(err_prediction_strengths)+np.asarray(mean_prediction_strengths)-1))
@@ -473,10 +517,7 @@ def plot_mean_prediction_strengths(k_prediction_strengths,cluster_sizes_per_k,th
     if title:
         ax.set_title(title, fontsize=25, pad=10)
     else:
-        if size_weighted:
-            title = "Mean Prediction Strength for Clustering with k Clusters weighted by Cluster Size"
-        else:
-            title = "Mean Prediction Strength for Clustering with k Clusters"
+        title = "Mean Prediction Strength for Clustering with k Clusters"
         ax.set_title(title, fontsize=25, pad=10)
     ax.set_xticks(k_clusters)
     ax.set_xlabel("Number of clusters", fontsize=16, labelpad=10)
@@ -494,7 +535,7 @@ def plot_mean_prediction_strengths(k_prediction_strengths,cluster_sizes_per_k,th
     #ax.legend(fontsize = 14)
 
 
-def plot_number_bursts_in_low_clusters_per_k(k_low_cluster_sizes, n_total,threshold, plot_proportion = False,plot_mean=False,figsize = (30, 16)):
+def plot_number_bursts_in_low_clusters_per_k(k_low_cluster_sizes, n_total,threshold, plot_proportion = False,figsize = None, plot_adjustments = [0.05,0.08,0.95, 0.93]):
     """ Plot proportion of bursts falling into clusters with low prediction strength (below a threshold):
     Args:
         k_low_cluster_sizes (dict): dictionary containing bursts falling into cluster with low prediction strenght for clustering with k clusters.
@@ -502,7 +543,6 @@ def plot_number_bursts_in_low_clusters_per_k(k_low_cluster_sizes, n_total,thresh
                                     value = k_clusters (cluster size of each individual cluster)
         n_total (int): total number of bursts clustered
         plot_proportion (bool): boolean for plotting the mean proportion of bursts
-        plot_mean (bool): boolean for plotting the mean or the total of all clusters in k clustering (mean over k-clusters)
 
     Returns:
         For each clustering plot of the average proportion of bursts falling into clusters with low prediction strength (below a threshold).
@@ -511,51 +551,53 @@ def plot_number_bursts_in_low_clusters_per_k(k_low_cluster_sizes, n_total,thresh
     fig, ax = plt.subplots(figsize=figsize)
     k_clusters = list(k_low_cluster_sizes.keys())
     k_bad_bursts = []
-    k_bad_bursts_err = []
     for k in k_clusters:
-        if plot_mean:
-            bad_bursts = np.mean(k_low_cluster_sizes[k])
-            bad_bursts_err = np.std(k_low_cluster_sizes[k])
-        else:
-            bad_bursts = np.sum(k_low_cluster_sizes[k])
-            bad_bursts_err = 0
+        bad_bursts = np.sum(k_low_cluster_sizes[k])
         if plot_proportion:
             bad_bursts = bad_bursts/n_total * 100
-            bad_bursts_err = bad_bursts_err/n_total * 100
         k_bad_bursts.append(bad_bursts)
-        k_bad_bursts_err.append(bad_bursts_err)
 
-    if plot_mean:
-        ax.errorbar(k_clusters, k_bad_bursts, yerr=k_bad_bursts_err, marker="o", markersize=15)
-    else:
-        ax.plot(k_clusters, k_bad_bursts, marker="o", markersize=15)
+
+    ax.plot(k_clusters, k_bad_bursts, marker="o", linestyle='dashed', markersize=15,color = "C0")
+
 
     for i, p in enumerate(k_bad_bursts):
         if plot_proportion:
-            ax.annotate("%.2f%%" % np.around(p, decimals=2), (k_clusters[i] + 0.1, k_bad_bursts[i] + 0.1),)
+            ax.annotate("%.2f%%" % np.around(p, decimals=2), (k_clusters[i] - 0.4, k_bad_bursts[i] - 100*0.04),color = "C0")
         else:
-            ax.annotate("#%d%" % int(p), (k_clusters[i] + 0.1, k_bad_bursts[i] + 0.1),)
+            ax.annotate("#%d" % int(p), (k_clusters[i] - 0.4, k_bad_bursts[i] - n_total*0.033),color="C0")
 
     title = ""
-    if plot_mean:
-        title += "Mean "
     if plot_proportion:
-        title += "Proportion of Bursts in Clusters below prediction Strength threshold= %.2f" % threshold
+        title += "Proportion of bursts in clusters below prediction strength threshold= %.2f" % threshold
     else:
-        if plot_mean:
-            title += "Number of Bursts in Clusters below prediction Strength threshold= %.2f" % threshold
-        else:
-            title += "Total Number of Bursts in Clusters below prediction Strength threshold= %.2f" % threshold
+        title += "Total number of bursts in clusters below prediction strength threshold= %.2f" % threshold
 
-    ax.set_title(title, fontsize=40)
+    ax.set_title(title, fontsize=25, pad=10)
     ax.set_xticks(k_clusters)
-    ax.set_xlabel("Number of clusters", fontsize=14)
+    ax.set_xlabel("Number of clusters", fontsize=14, color="C0")
     if plot_proportion:
-        ax.set_ylabel("% Bursts", fontsize=14)
+        ax.set_ylabel("% Bursts", fontsize=14,color="C0")
+        ax.set_ylim((0,110))
     else:
-        ax.set_ylabel("# Bursts", fontsize=14)
+        ax.set_ylabel("# Bursts", fontsize=14,color="C0")
+        ax.set_ylim((0,n_total))
     ax.set_xlim((k_clusters[0], k_clusters[-1] + 2))
+    ax.tick_params(axis='y', labelcolor="C0")
 
+
+    ax2 = ax.twinx()
+    ax2.set_ylabel('#Clusters below threshold', fontsize=14,color="C3")
+    n_low_clusters = [len(k_low_cluster_sizes[k]) for k in k_clusters]
+    ax2.plot(k_clusters, n_low_clusters,marker="v", linestyle='dashed', markersize=15, color = "C3")
+    ax2.tick_params(axis='y', labelcolor="C3")
+    ax2.set_ylim((0, max(n_low_clusters) +1))
+
+    left = plot_adjustments[0]
+    bottom = plot_adjustments[1]
+    right = plot_adjustments[2]
+    top = plot_adjustments[3]
+    plt.subplots_adjust(left, bottom, right, top)
 
 def plot_number_burst_with_low_prediction_strength_per_k(k_low_individual_per_cluster,n_total,threshold, plot_proportion=False,plot_mean=False, figsize=(30, 16)):
     fig, ax = plt.subplots(figsize=figsize)
@@ -569,6 +611,8 @@ def plot_number_burst_with_low_prediction_strength_per_k(k_low_individual_per_cl
         if plot_mean:
             low_bursts = np.mean(k_low_individual_per_cluster[k])
             k_low_bursts_err = np.std(k_low_individual_per_cluster[k])
+            if np.isnan(low_bursts):
+                low_bursts = np.nan_to_num(0)
         else:
             low_bursts = np.sum(k_low_individual_per_cluster[k])
             k_low_bursts_err = 0
@@ -581,7 +625,8 @@ def plot_number_burst_with_low_prediction_strength_per_k(k_low_individual_per_cl
 
 
     if plot_mean:
-        ax.errorbar(k_clusters, k_low_bursts, yerr=k_low_bursts_err, marker="o", markersize=15)
+        ax.plot(k_clusters, k_low_bursts, "o")
+        ax.errorbar(k_clusters, k_low_bursts, yerr=k_low_bursts_err, fmt='-', ecolor='lightgray', elinewidth=3)
     else:
         ax.plot(k_clusters, k_low_bursts, marker="o", markersize=15)
 
@@ -602,7 +647,7 @@ def plot_number_burst_with_low_prediction_strength_per_k(k_low_individual_per_cl
         else:
             title += "Total Number of Bursts with individual Prediction Strength below threshold= %.2f" % threshold
 
-    ax.set_title(title, fontsize=40)
+    ax.set_title(title, fontsize=25)
     ax.set_xticks(k_clusters)
     ax.set_xlabel("Number of clusters", fontsize=14)
     if plot_proportion:

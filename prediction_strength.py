@@ -174,9 +174,9 @@ def get_clusters_below_threshold(prediction_strengths_per_k, cluster_sizes_per_k
     low_cluster_sizes_percent_per_k = {}
 
     for k in k_clusters:
-        prediction_strengths = prediction_strengths_per_k[k]
+        prediction_strengths = np.asarray(prediction_strengths_per_k[k])
         low_clusters_idx = np.where(prediction_strengths < threshold)
-        low_cluster_sizes = cluster_sizes_per_k[k][low_clusters_idx]
+        low_cluster_sizes = np.asarray(cluster_sizes_per_k[k])[low_clusters_idx]
         low_cluster_sizes_percent = ((np.asarray(cluster_sizes_per_k[k])/ np.sum(cluster_sizes_per_k[k])) * 100)[low_clusters_idx]
 
         low_clusters_per_k[k] = low_clusters_idx[0]
@@ -185,7 +185,7 @@ def get_clusters_below_threshold(prediction_strengths_per_k, cluster_sizes_per_k
 
     return low_clusters_per_k, low_cluster_sizes_per_k, low_cluster_sizes_percent_per_k
 
-def get_points_in_clusters_below_and_above_threshold(predictions_strengths_per_sample_per_k, valid_indices, valid_labels, threshold):
+def get_points_in_clusters_below_and_above_threshold(data, predictions_strengths_per_sample_per_k, valid_indices, valid_labels, threshold):
     """ extract burst indices for burst with low individual prediction strength for clustering with k clusters per cluster
     Args:
             predictions_strengths_per_sample_per_k (dict): dictionary containing the prediction strength for each sample in cluster_i after clustering into k clusters
@@ -223,6 +223,7 @@ def get_points_in_clusters_below_and_above_threshold(predictions_strengths_per_s
     high_predictive_points_labels_per_k = {}
 
     for k in k_clusters:
+        predictions_strengths_per_sample = predictions_strengths_per_sample_per_k[k]
         valid_labels_k = valid_labels[k]
         low_individual_in_clusters_k = []
         low_individual_in_clusters_k_sizes = []
@@ -230,14 +231,15 @@ def get_points_in_clusters_below_and_above_threshold(predictions_strengths_per_s
 
         high_individual_in_clusters_k = []
 
-        low_individual_labels_k = np.zeros(len(valid_labels_k)) - 1
-        high_individual_labels_k = np.zeros(len(valid_labels_k)) - 1
+        low_individual_labels_k = np.zeros(len(data)) - 1
+        high_individual_labels_k = np.zeros(len(data)) - 1
 
         for i in range(k):
+            cluster_i_ps_per_sample = np.asarray(predictions_strengths_per_sample[i])
             cluster_i_indices = np.where(valid_labels_k == i)[0]
-            index_in_cluster = np.where(np.asarray(predictions_strengths_per_sample_per_k[k][i]) < threshold)  # get position relative to cluster
-            low_predictive_points = valid_indices[cluster_i_indices[index_in_cluster]]
-            high_predictive_points = valid_indices[np.delete(cluster_i_indices, index_in_cluster)]
+            low_points_indices_in_cluster = np.where(cluster_i_ps_per_sample < threshold)  # get position relative to cluster
+            low_predictive_points = valid_indices[cluster_i_indices[low_points_indices_in_cluster]]
+            high_predictive_points = valid_indices[np.delete(cluster_i_indices, low_points_indices_in_cluster)]
 
             low_individual_in_clusters_k += list(low_predictive_points)  # get indices (relative to overall data) of low individual data points in cluster_i
             low_individual_in_clusters_k_sizes.append(len(low_predictive_points)) # get number of datapoints below threshold in cluster_i
@@ -263,62 +265,3 @@ def get_points_in_clusters_below_and_above_threshold(predictions_strengths_per_s
 
 
 
-
-
-
-from asymmetric_laplacian_distribution import get_index_per_class
-
-
-data_dir = "data/"
-
-data = np.load(data_dir + "clearly_separated_data_F_signal_noise.npy")
-
-amplitude_conditions =["S", "M", "L"] # ["S", "S/M", "M", "M/L", "L"]
-time_constant_conditions = ["equal_sharp", "equal_wide", "wide_sharp_negative_skew", "sharp_wide_positive_skew"]#["equal_sharp", "equal_medium", "equal_wide", "wide_sharp_negative_skew", "wide_medium_negative_skew","medium_sharp_negative_skew","sharp_wide_positive_skew", "medium_wide_positive_skew" ,"sharp_medium_positive_skew"]
-ambiguous_conditions = []#["S/M", "M/L", "equal_medium", "wide_medium_negative_skew", "medium_sharp_negative_skew", "medium_wide_positive_skew", "sharp_medium_positive_skew"]
-
-samples_per_condition = 1000
-samples_per_ambiguous_condition = 400
-
-cluster_dict = get_index_per_class(amplitude_conditions,time_constant_conditions, ambiguous_conditions, samples_per_condition, samples_per_ambiguous_condition)
-
-
-save_dir = "Toy_data/Clearly_Separated/Prediction_Strength/"
-
-import training_set_split
-train_fold_indices, train_fold_indices = training_set_split.get_training_folds(data, cluster_dict)
-
-
-
-training_set = data[train_fold_indices[0]]
-validation_set = data[train_fold_indices[1]]
-
-
-training_set_labels = np.load(save_dir + "Labels/labels_k=10_reg=None_training.npy")
-validation_set_labels = np.load(save_dir + "Labels/labels_k=10_reg=None_validation.npy")
-
-train_labels = {}
-valid_labels = {}
-for i,labels in enumerate(training_set_labels):
-    train_labels[i+1] = labels
-    valid_labels[i+1] = validation_set_labels[i]
-
-
-prediction_strengths, cluster_sizes = get_prediction_strength_per_k(data, train_fold_indices[0], train_fold_indices[1], train_labels, valid_labels, per_sample = False)
-
-import functions_for_plotting
-import importlib
-importlib.reload(functions_for_plotting)
-
-#true_labels = np.repeat(np.arange(0,12), 500)
-
-#functions_for_plotting.plot_clusters(training_set, true_labels,train_labels[12], 12, 3,4, figsize=(20,20),n_bursts = 100,y_lim = (0,14))
-test = {}
-test_sizes = {}
-for key in prediction_strengths.keys():
-    if key <= 20:
-        test[key] = np.amin(prediction_strengths[key])
-        test_sizes[key] = cluster_sizes[key]
-
-plt.close("all")
-functions_for_plotting.plot_mean_prediction_strengths(test, test_sizes,threshold=None, size_weighted=True,title = "")
