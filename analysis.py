@@ -1,11 +1,12 @@
 import numpy as np
 from spectral_clustering import spectral_clustering
 import functions_for_plotting
-from asymmetric_laplacian_distribution import get_index_per_class, get_labels
+from asymmetric_laplacian_distribution import get_index_per_class, get_labels, labels_to_layout_mapping
 from sklearn.cluster import KMeans
 import training_set_split
 import prediction_strength
-import os
+import importlib
+import matplotlib.pyplot as plt
 
 
 def cluster_data(data, training_set, n_clusters,metric, k_conditions,reg_conditions, is_training, save_dir):
@@ -42,40 +43,7 @@ def cluster_data_kmeans(data, n_clusters):
 
 
 
-data_dir = "data/"
-
-data = np.load(data_dir + "ambiguous_data_tau_amplitude_F_signal_noise.npy")
-
-amplitude_conditions = ["S", "S/M", "M", "M/L", "L"]
-time_constant_conditions = ["equal_sharp", "equal_medium", "equal_wide", "wide_sharp_negative_skew", "wide_medium_negative_skew","medium_sharp_negative_skew","sharp_wide_positive_skew", "medium_wide_positive_skew" ,"sharp_medium_positive_skew"]
-ambiguous_conditions = ["S/M", "M/L", "equal_medium", "wide_medium_negative_skew", "medium_sharp_negative_skew", "medium_wide_positive_skew", "sharp_medium_positive_skew"]
-
-samples_per_condition = 1000
-samples_per_ambiguous_condition = 400
-
-cluster_dict = get_index_per_class(amplitude_conditions,time_constant_conditions, ambiguous_conditions, samples_per_condition, samples_per_ambiguous_condition)
-true_labels_ambiguous = get_labels_by_layout(data,cluster_dict, list(cluster_dict.keys()), 9, layout_per_condition=(2,5))
-
-
-
-n_clusters = range(1, 50)
-k_conditions = [5, 10]
-reg_conditions = [None, 0.01, 0.1, 1, 5, 10, 20, 50, 100]
-is_training = [False, True]
-save_dir = "Toy_data/Ambiguous/Ambiguous_Tau_Amplitude/Prediction_Strength/"
-
-
-train_fold_indices, train_fold_indices = training_set_split.get_training_folds(data, cluster_dict)
-
-training_set = data[train_fold_indices[0]]
-validation_set = data[train_fold_indices[1]]
-
-cluster_data(validation_set, training_set, n_clusters,"euclidean", k_conditions,reg_conditions, is_training, save_dir)
-
-
-
-######################################## Prediction Strength ##########################################################
-
+#----------------------------------------------- DATA ------------------------------------------------------------------
 data_dir = "data/"
 
 data = np.load(data_dir + "clearly_separated_data_F_signal_noise.npy")
@@ -89,36 +57,57 @@ samples_per_ambiguous_condition = 400
 
 cluster_dict = get_index_per_class(amplitude_conditions,time_constant_conditions, ambiguous_conditions, samples_per_condition, samples_per_ambiguous_condition)
 
-import asymmetric_laplacian_distribution
-importlib.reload(asymmetric_laplacian_distribution)
-
-true_labels = asymmetric_laplacian_distribution.get_labels(data, cluster_dict)
+true_labels = get_labels(data, cluster_dict)
 clusters_ordered = list(range(0,13))
 layout_label_mapping = labels_to_layout_mapping(clusters_ordered, 4, (1,4))
 
 
+#-------------------------------------------- Prediction Strength ------------------------------------------------------
 
-save_dir = "Toy_data/Clearly_Separated/Prediction_Strength/"
-train_fold_indices, train_fold_indices = training_set_split.get_training_folds(data, cluster_dict)
+prediction_strength_dir = "Toy_data/Clearly_Separated/Prediction_Strength/"
+eigenvalue_dir = "Toy_data/Clearly_Separated/Eigenvalues/"
 
 
-
+train_fold_indices, train_fold_indices = training_set_split.get_training_folds(data, cluster_dict,cluster_wise=True,folds = 2)
 training_set = data[train_fold_indices[0]]
 validation_set = data[train_fold_indices[1]]
 
+ks = [10]#[5,10]
+regs = [1,5,10, 20, 50, 100, "heuristic"]#[None, 0.01, 0.1, 1, 5, 10, 20, 50, 100, "heuristic"]
 
-training_set_labels = np.load(save_dir + "Labels/labels_k=10_reg=None_training.npy")
-validation_set_labels = np.load(save_dir + "Labels/labels_k=10_reg=None_validation.npy")
+for k in ks:
+    for reg in regs:
+        training_set_labels = np.load(prediction_strength_dir + "Labels/labels_k=%d_reg=%s_training.npy" % (k, str(reg)))
+        validation_set_labels = np.load(prediction_strength_dir + "Labels/labels_k=%d_reg=%s_validation.npy" % (k, str(reg)))
+        training_set_eigenvalues = np.load(prediction_strength_dir + "Eigenvalues/eigval_k=%d_reg=%s_training.npy" % (k, str(reg)))
+        validation_set_eigenvalues = np.load(prediction_strength_dir + "Eigenvalues/eigval_k=%d_reg=%s_validation.npy" % (k, str(reg)))
 
-train_labels = {}
-valid_labels = {}
-for i,labels in enumerate(training_set_labels):
-    train_labels[i+1] = labels
-    valid_labels[i+1] = validation_set_labels[i]
+        if reg == "heuristic":
+            reg_train = np.round(np.load(prediction_strength_dir + "k=%d_quin_rohe_heuristic_lambda_training.npy" % k),2)
+            reg_valid = np.round(np.load(prediction_strength_dir + "k=%d_quin_rohe_heuristic_lambda_validation.npy" % k),2)
+        else:
+            reg_train = reg
+            reg_valid = reg
+
+        train_labels = {}
+        valid_labels = {}
+        for i, labels in enumerate(training_set_labels):
+            train_labels[i+1] = labels
+            valid_labels[i+1] = validation_set_labels[i]
 
 
-importlib.reload(functions_for_plotting)
-functions_for_plotting.plot_clusters(training_set, true_labels[train_fold_indices[0]],train_labels[12], 3,4, layout_label_mapping,figsize=(20,20),n_bursts = 100,y_lim = (0,14))
+        subplot_adjustments = [0.05, 0.95, 0.05, 0.87, 0.35, 0.18]#[0.05,0.95,0.03,0.9,0.4, 0.15]
+        figsize = (30,20) #(20,20)
+
+        functions_for_plotting.plot_eigenvalues(training_set_eigenvalues, true_cutoff=12, eigenvalue_range=[0,100],figsize = (20,10), savefile="training_set_eigenvalues_k=%d_reg=%s.pdf" % (k,reg),configuration = "k=%d, $\lambda$=%s - Training Set" % (k,str(reg_train)))
+        functions_for_plotting.plot_eigenvalues(validation_set_eigenvalues, true_cutoff=12, eigenvalue_range=[0,100],figsize = (20,10), savefile ="validation_set_eigenvalues_k=%d_reg=%s.pdf" % (k,reg),configuration = "k=%d, $\lambda$=%s - Validation Set" % (k,str(reg_valid)))
+
+
+        functions_for_plotting.plot_clusters(training_set, true_labels[train_fold_indices[0]],train_labels[12], 3,4, layout_label_mapping,figsize=figsize,n_bursts = 100,y_lim = (0,16),savefile="training_set_clusters_k=%d_reg=%s.pdf" % (k,reg),subplot_adjustments= subplot_adjustments, title= "Training Set Clusters \n k=%d, $\lambda$=%s" % (k,str(reg_train)))
+        functions_for_plotting.plot_clusters(validation_set, true_labels[train_fold_indices[1]],valid_labels[12], 3,4, layout_label_mapping,figsize=figsize,n_bursts = 100,y_lim = (0,16),savefile="validation_set_clusters_k=%d_reg=%s.pdf" % (k,reg), subplot_adjustments= subplot_adjustments, title= "Validation Set Clusters \n k=%d, $\lambda$=%s" % (k,str(reg_valid)))
+
+
+
 
 
 
@@ -127,8 +116,6 @@ functions_for_plotting.plot_clusters(training_set, true_labels[train_fold_indice
 prediction_strengths, cluster_sizes = prediction_strength.get_prediction_strength_per_k(data, train_fold_indices[0], train_fold_indices[1], train_labels, valid_labels, per_sample = False)
 prediction_strength_per_sample, cluster_sizes_per_sample = prediction_strength.get_prediction_strength_per_k(data, train_fold_indices[0], train_fold_indices[1], train_labels, valid_labels, per_sample = True)
 
-import importlib
-importlib.reload(functions_for_plotting)
 
 test = {}
 test_per_sample = {}

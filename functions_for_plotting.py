@@ -4,6 +4,7 @@ import matplotlib
 from matplotlib import pyplot as plt
 from matplotlib import cm
 import seaborn as sns
+import textwrap
 
 def plot_cluster_distribution(data, labels, k_clusters,rows, columns, figsize = (30,25), y_lim = None, arrangement = None):
     fig = plt.figure(figsize=figsize)
@@ -197,12 +198,12 @@ def plot_clusters(data, true_labels,labels_k,rows,columns, layout_label_mapping,
 
                 if percent_true_cluster:
                     cluster_title = ("Cluster [" + ', '.join(['%d'] * len(new_clusters_splitted[corresponding_true_label])) + "]" +
-                                    "\nTrue Cluster: " + ', '.join(['[' + ', '.join(['%d'] * len(x)) +']' for x in true_clusters]) +
-                                    "\n%%: " + ', '.join(['[' + ', '.join(['%.1f'] * len(x)) +']' for x in true_cluster_percents])) % tuple(new_clusters_splitted[corresponding_true_label] + sum(true_clusters,[]) + sum(true_cluster_percents,[]))
+                                    "\nTrue Cluster: " + "\n".join(textwrap.wrap(', '.join(['[' + ', '.join(['%d'] * len(x)) +']' for x in true_clusters]), 30)) +
+                                    "\n%%: " + "\n".join(textwrap.wrap(', '.join(['[' + ', '.join(['%.1f'] * len(x)) +']' for x in true_cluster_percents]), 30))) % tuple(new_clusters_splitted[corresponding_true_label] + sum(true_clusters,[]) + sum(true_cluster_percents,[]))
                 else:
                     cluster_title = ("Cluster [" + ', '.join(['%d'] * len(new_clusters_splitted[corresponding_true_label])) + "]" +
-                                    "\nTrue Cluster: " + ', '.join(['[' + ', '.join(['%d'] * len(x)) +']' for x in true_clusters]) +
-                                    "\n#:  " + ', '.join(['[' + ', '.join(['%.1f'] * len(x)) +']' for x in true_cluster_counts])) % tuple(new_clusters_splitted[corresponding_true_label] + sum(true_clusters,[]) + sum(true_cluster_counts,[]))
+                                    "\nTrue Cluster: " + "\n".join(textwrap.wrap(', '.join(['[' + ', '.join(['%d'] * len(x)) +']' for x in true_clusters]), 30)) +
+                                    "\n#:  " + "\n".join(textwrap.wrap(', '.join(['[' + ', '.join(['%d'] * len(x)) +']' for x in true_cluster_counts]), 30))) % tuple(new_clusters_splitted[corresponding_true_label] + sum(true_clusters,[]) + sum(true_cluster_counts,[]))
 
             row_end = int(row_start + 1)
 
@@ -232,7 +233,6 @@ def plot_clusters(data, true_labels,labels_k,rows,columns, layout_label_mapping,
             else:
                 if position_count < splitted_into-1:
                     ax = fig.add_subplot(inner_grid[row_start:row_end, 0], sharex=topax)
-                    ax.set_xticklabels([])
                     plt.setp(ax.get_xticklabels(), visible=False)
 
                 else:# position_count == splitted_into-1:
@@ -264,12 +264,11 @@ def plot_clusters(data, true_labels,labels_k,rows,columns, layout_label_mapping,
                 corresponding_merged_true_clusters = list(merged_classes[np.where(new_clusters_merged == i)[0]][0])
                 corresponding_merged_true_clusters.remove(corresponding_true_label)
                 for merged_class in corresponding_merged_true_clusters:
-                    if merged_class in empty_true_clusters:
+                    if merged_class in empty_true_clusters and merged_class not in splitted_classes:
                         row_i = int(np.where(normal_layout == merged_class)[0][0])
                         column_i =  int(np.where(normal_layout == merged_class)[1][0])
                         ax = fig.add_subplot(outer_grid[row_i:(row_i + 1), column_i])
                         ax.plot()
-                        ax.set_xticklabels([])
                         ax.set_title("True Cluster: [%d]" % merged_class,loc="left", fontsize = 12)
                         if y_lim:
                             ax.set_ylim(y_lim)
@@ -283,20 +282,19 @@ def plot_clusters(data, true_labels,labels_k,rows,columns, layout_label_mapping,
 
             if len(true_clusters) > 1:
                 if percent_true_cluster:
-                    cluster_title = ("Cluster %i \nTrue Cluster: [" + ', '.join(
-                                            ['%d'] * len(true_clusters)) + "]" + "\n%%: [" + ', '.join(
-                                            ['%.1f'] * len(true_cluster_percents)) + "]") % tuple([i] + list(true_clusters) + list(np.round(np.asarray(true_cluster_percents) * 100, decimals=1)))  # sum(list(map(list,zip(true_clusters,true_cluster_counts))),[]))
+                    cluster_title = ("Cluster %i "
+                                     "\nTrue Cluster: [" + "\n".join(textwrap.wrap(', '.join(['%d'] * len(true_clusters)) + "]",30)) +
+                                     "\n%%: [" + "\n".join(textwrap.wrap(', '.join(['%.1f'] * len(true_cluster_percents)) + "]",30))) % tuple([i] + list(true_clusters) + list(np.round(np.asarray(true_cluster_percents) * 100, decimals=1)))  # sum(list(map(list,zip(true_clusters,true_cluster_counts))),[]))
                                      #"\n%%: [" + ', '.join(['%d/%d'] * len(true_cluster_counts)) + "]") % tuple([i] + list(true_clusters) + sum(list(map(list, zip(true_cluster_counts, true_class_size))),[]))
                 else:
-                    cluster_title = ("Cluster %i \nTrue Cluster: [" + ', '.join(
-                        ['%d'] * len(true_clusters)) + "]" + "\n#: [" + ', '.join(
-                        ['%d'] * len(true_cluster_counts)) + "]") % tuple([i] + list(true_clusters) + list(
-                        true_cluster_counts))  # sum(list(map(list,zip(true_clusters,true_cluster_counts))),[]))
+                    cluster_title = ("Cluster %i "
+                                     "\nTrue Cluster: [" + "\n".join(textwrap.wrap(', '.join(['%d'] * len(true_clusters)) + "]",30)) +
+                                     "\n#: [" + "\n".join(textwrap.wrap(', '.join(['%d'] * len(true_cluster_counts)) + "]",30))) % tuple([i] + list(true_clusters) + list(true_cluster_counts))  # sum(list(map(list,zip(true_clusters,true_cluster_counts))),[]))
             else:
                 if percent_true_cluster:
-                    cluster_title = ("Cluster %i \nTrue Cluster: [" + ', '.join(
-                        ['%d'] * len(true_clusters)) + "] " + "%%: [" + ', '.join(
-                        ['%.1f'] * len(true_cluster_percents)) + "]") % tuple([i] + list(true_clusters) + list(np.round(np.asarray(true_cluster_percents) * 100, decimals=1)) ) # sum(list(map(list,zip(true_clusters,true_cluster_counts))),[]))
+                    cluster_title = ("Cluster %i "
+                                     "\nTrue Cluster: [" + ', '.join(['%d'] * len(true_clusters)) + "] " +
+                                     "%%: [" + ', '.join(['%.1f'] * len(true_cluster_percents)) + "]") % tuple([i] + list(true_clusters) + list(np.round(np.asarray(true_cluster_percents) * 100, decimals=1)) ) # sum(list(map(list,zip(true_clusters,true_cluster_counts))),[]))
                         #"%%: [" + ', '.join(['%d/%d'] * len(true_cluster_counts)) + "]") % tuple([i] + list(true_clusters) + sum(list(map(list, zip(true_cluster_counts, true_class_size))), []))
 
                 else:
@@ -304,6 +302,8 @@ def plot_clusters(data, true_labels,labels_k,rows,columns, layout_label_mapping,
                         ['%d'] * len(true_clusters)) + "]" + " #: [" + ', '.join(
                         ['%d'] * len(true_cluster_counts)) + "]") % tuple([i] + list(true_clusters) + list(
                         true_cluster_counts))  # sum(list(map(list,zip(true_clusters,true_cluster_counts))),[]))
+
+
             ax.set_title(cluster_title, loc="left", fontsize = 12)
             ax.set_xlabel("Time")
 
@@ -325,12 +325,22 @@ def plot_clusters(data, true_labels,labels_k,rows,columns, layout_label_mapping,
 
             if corresponding_true_label in empty_true_clusters:
                 empty_true_clusters.remove(corresponding_true_label)
+
+
+    for empty_true_cluster in empty_true_clusters:
+        row_i = int(np.where(normal_layout == empty_true_cluster)[0][0])
+        column_i = int(np.where(normal_layout == empty_true_cluster)[1][0])
+        ax = fig.add_subplot(outer_grid[row_i:(row_i + 1), column_i])
+        ax.set_title("True Cluster: [%d]" % empty_true_cluster, loc="left", fontsize=12)
+        ax.plot()
+        plt.setp(ax.get_xticklabels(), visible=False)
+
     plt.savefig(savefile)
     plt.close()
     #outer_grid.tight_layout(fig)
 
 
-def plot_eigenvalues(eigenvalues,true_cutoff=None,cutoff=None,eigenvalue_range=None, figsize = None, configuration = None):
+def plot_eigenvalues(eigenvalues,true_cutoff=None,cutoff=None,eigenvalue_range=None, figsize = None, configuration = None, savefile="test.pdf"):
     plt.close("all")
     plt.figure(figsize=figsize)
     if eigenvalue_range:
@@ -356,6 +366,8 @@ def plot_eigenvalues(eigenvalues,true_cutoff=None,cutoff=None,eigenvalue_range=N
         plt.title("Eigenvalues of Graph Laplacian in ascending order", fontsize=20, pad=20)
     plt.legend(fontsize=14)
 
+    plt.savefig(savefile)
+    plt.close()
 
 #def plot_eigenvalue_gap_sizes
 

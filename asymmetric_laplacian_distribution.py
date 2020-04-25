@@ -47,7 +47,19 @@ SAMPLES_PER_AMBIGUOUS_CONDITION = 400
 
 
 
-def asymmetric_laplace_distribution(x,mu,lam,tau1,tau2):
+def asymmetric_laplace_function(x,mu,lam,tau1,tau2):
+    """ Asymmetric Laplace Function
+    Args:
+        x (float): x value for calculating the function
+        mu (float): peak x position
+        lam (float): amplitude
+        tau1 (float): time constant for x values smaller than mu
+        tau2 (float): time constant for x values larger than mu
+
+    Return:
+        f (float): value of the asymmetric laplacian function at the position x
+    """
+
     if x < mu:
         f = lam*np.exp(tau1*(x-mu))
     else:
@@ -56,11 +68,33 @@ def asymmetric_laplace_distribution(x,mu,lam,tau1,tau2):
 
 
 def sample_parameter(lower, upper):
+    """ Uniformly randomly sample parameter from a given interval
+    Args:
+        lower (float): lower boundary of interval
+        upper (float): upper boundary of interval
+
+    Returns:
+        randomly uniformly sampled parameter
+    """
     return np.random.uniform(lower, upper)
 
 
-def generate_ALD(X, mu, amplitude_condition, time_constant_condition):
-    V_ald = np.vectorize(asymmetric_laplace_distribution)
+def generate_ALF(X, mu, amplitude_condition, time_constant_condition):
+    """
+    Args:
+        X (np.ndarray): Array of x values
+        mu (float): peak x position
+        amplitude_condition (string): string indicating the height of the amplitude
+        time_constant_condition (string): string indicating the relationship between the two time constants
+
+    Returns:
+        f (nd.array): Array of values calculated with the asymmetric laplacian function with sampled parameters at positions in X
+        tau1 (float): sampled tau1
+        tau2 (float): sampled tau1
+        lam (float): sampled amplitude
+    """
+
+    V_alf = np.vectorize(asymmetric_laplace_function) # vectorize function
 
     if amplitude_condition == "S":
         lam = sample_parameter(S[0], S[1])
@@ -118,13 +152,29 @@ def generate_ALD(X, mu, amplitude_condition, time_constant_condition):
     else:
         print("Invalid time_constant condition: %s ..." % time_constant_condition)
 
-    f = V_ald(X, mu=mu, lam=lam, tau1=tau1, tau2=tau2)
+    f = V_alf(X, mu=mu, lam=lam, tau1=tau1, tau2=tau2)
 
     return f, tau1, tau2, lam
 
 
 
-def generate_ALD_data(X, amplitude_conditions, time_constant_conditions, ambiguous_conditions, samples_per_condition=1000,samples_per_ambiguous_condition=100, mu=1750):
+def generate_ALF_data(X, amplitude_conditions, time_constant_conditions, ambiguous_conditions, samples_per_condition=1000,samples_per_ambiguous_condition=100, mu=1750):
+    """
+    Args:
+        X (np.ndarray): Array of x values
+        amplitude_conditions (list): list of strings indicating the height of the amplitude
+        time_constant_conditions (list): list of strings indicating the relationship between the two time constants
+        ambiguous_conditions (list): list of strings with conditions supposed to be ambiguous
+        samples_per_condition (int): number of functions to generate per condition
+        samples_per_ambiguous_condition (int): number of functions to generate per ambiguous condition
+        mu (float): peak x position
+
+    Returns:
+        F_signal (list): List of np.ndarrays containing the sampled asymmetric laplacian functions
+        F_signal_noise (list): List of np.ndarray containing the sampled asymmetric laplacian functions with noise added
+        noises (list): List of np.ndarray containing each sampled noise
+        param_data (pd.DataFrame): Pandas DataFrame containing the parameters for each generated function
+    """
     # Random Seed
     np.random.seed(42)
 
@@ -149,7 +199,7 @@ def generate_ALD_data(X, amplitude_conditions, time_constant_conditions, ambiguo
                 A_conditions.append(amplitude_condition)
                 tau_conditions.append(time_constant_condition)
 
-                f_i, tau1, tau2, lam = generate_ALD(X,mu=mu,amplitude_condition=amplitude_condition, time_constant_condition=time_constant_condition)
+                f_i, tau1, tau2, lam = generate_ALF(X,mu=mu,amplitude_condition=amplitude_condition, time_constant_condition=time_constant_condition)
                 if amplitude_condition == "S":
                     noise = np.random.normal(SMALL_NOISE[0], SMALL_NOISE[0], f_i.shape)
                 elif amplitude_condition == "S/M":
@@ -180,6 +230,19 @@ def generate_ALD_data(X, amplitude_conditions, time_constant_conditions, ambiguo
 
 
 def get_index_per_class(amplitude_conditions,time_constant_conditions, ambiguous_conditions, samples_per_condition, samples_for_ambiguous):
+    """
+    Args:
+        amplitude_conditions (list): list of strings indicating the height of the amplitude
+        time_constant_conditions (list): list of strings indicating the relationship between the two time constants
+        ambiguous_conditions (list): list of strings with conditions supposed to be ambiguous
+        samples_per_condition (int): number of functions generated per condition
+        samples_for_ambiguous (int): number of functions generated per ambiguous condition
+
+    Returns:
+        class_dict (dict): Dictionary containing start and end point of each condition relative to data
+                           key (string) = Condition (combination of amplitude and time condition)
+                           value (tuple) = (Start, End)
+    """
     class_dict = {}
     current_index = 0
     for amplitude_condition in amplitude_conditions:
@@ -195,6 +258,17 @@ def get_index_per_class(amplitude_conditions,time_constant_conditions, ambiguous
 
 
 def get_labels(data,cluster_dict, cluster_order = None):
+    """
+    Args:
+        data (np.ndarray):  NxM datapoints
+        cluster_dict (dict): Dictionary containing start and end point of each cluster relative to data
+                           key (string) = cluster description
+                           value (tuple) = (Start, End)
+        cluster_order (list): List containing keys of clusters to which integer labels are given in ascending order
+
+    Returns:
+        labels (np.ndarray): N integer labels for each datapoint
+    """
     if not cluster_order:
         cluster_order = list(cluster_dict.keys())
 
@@ -203,7 +277,22 @@ def get_labels(data,cluster_dict, cluster_order = None):
         labels[cluster_dict[key][0]:cluster_dict[key][1] + 1] = i
     return labels
 
+
 def labels_to_layout_mapping(k_cluster_labels_ordered, clusters_per_condition_for_layout, layout_per_condition):
+    """
+    Args:
+        k_cluster_labels_ordered (list): List of labels for each cluster ordered to be displayed in this certain order. Related cluster labels are sequential.
+        clusters_per_condition_for_layout (int): Number of clusters seen as related and wanted to be displayed together (e.g. all high amplitude clusters)
+        layout_per_condition (tuple): Layout in form of (rows,columns) for related clusters to be plotted (5 related clusters should be displayed in 2X3 layout)
+
+    Returns:
+        layout_label_mapping (dict): Dictionary mapping each label to a layout label to make sure that related clusters are displayed together in the layout format of layout_per_condition
+                                     key: original label
+                                     value: label in grid layout to make sure that each related batch of clusters is plotted in the wanted layout
+
+        e.g. 3 amplitude conditions each has 9 sub-conditions and we want to have a layout of 5x2 the layout_label_mapping maps the first batch of amplitude cluster to labels 0 to 8.
+        In order to make sure the layout for the second batch is preserved we skip the position 9 and start mapping the labels of the second batch to labels 10 to 18...
+    """
     layout_label_mapping = {}
     shift_needed_to_stay_in_layout = layout_per_condition[0] * layout_per_condition[1] - clusters_per_condition_for_layout
 
@@ -227,7 +316,7 @@ def main():
     X = np.round(np.linspace(TIME_RANGE[0],TIME_RANGE[1],TIME_RANGE[1] + 1))
     np.random.seed(42)
 
-    F_signal, F_signal_noise, noises, param_data = generate_ALD_data(X, AMPLITUDE_CONDITIONS, TIME_CONSTANT_CONDITIONS, AMBIGUOUS_CONDITIONS, SAMPLES_PER_CONDITION,SAMPLES_PER_AMBIGUOUS_CONDITION,MU)
+    F_signal, F_signal_noise, noises, param_data = generate_ALF_data(X, AMPLITUDE_CONDITIONS, TIME_CONSTANT_CONDITIONS, AMBIGUOUS_CONDITIONS, SAMPLES_PER_CONDITION,SAMPLES_PER_AMBIGUOUS_CONDITION,MU)
     print("Done!")
 
     param_data.to_csv(SAVE_DIR +"/" + SAVE_FILE_NAME + "_parameter" + ".csv",index=False)
