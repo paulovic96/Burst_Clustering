@@ -4,6 +4,7 @@ import functions_for_plotting
 from asymmetric_laplacian_distribution import get_index_per_class, get_labels, labels_to_layout_mapping
 from sklearn.cluster import KMeans
 import training_set_split
+import seaborn as sns
 import prediction_strength
 import importlib
 import matplotlib.pyplot as plt
@@ -46,10 +47,12 @@ def cluster_data_kmeans(data, n_clusters):
 #----------------------------------------------- DATA ------------------------------------------------------------------
 data_dir = "data/"
 
-data = np.load(data_dir + "clearly_separated_data_F_signal_noise.npy")
+data = np.load(data_dir + "clearly_separated_data_F_signal_noise.npy")#np.load(data_dir + "ambiguous_data_tau_amplitude_F_signal_noise.npy") #np.load(data_dir + "clearly_separated_data_F_signal_noise.npy")
 
-amplitude_conditions =["S", "M", "L"] # ["S", "S/M", "M", "M/L", "L"]
-time_constant_conditions = ["equal_sharp", "equal_wide", "wide_sharp_negative_skew", "sharp_wide_positive_skew"]#["equal_sharp", "equal_medium", "equal_wide", "wide_sharp_negative_skew", "wide_medium_negative_skew","medium_sharp_negative_skew","sharp_wide_positive_skew", "medium_wide_positive_skew" ,"sharp_medium_positive_skew"]
+amplitude_conditions = ["S", "M", "L"] #["S", "S/M", "M", "M/L", "L"] #["S", "M", "L"]
+time_constant_conditions = ["equal_sharp", "equal_wide", "wide_sharp_negative_skew", "sharp_wide_positive_skew"]
+#["equal_sharp", "equal_medium", "equal_wide", "wide_sharp_negative_skew", "wide_medium_negative_skew","medium_sharp_negative_skew","sharp_wide_positive_skew", "medium_wide_positive_skew" ,"sharp_medium_positive_skew"]
+#["equal_sharp", "equal_wide", "wide_sharp_negative_skew", "sharp_wide_positive_skew"]
 ambiguous_conditions = []#["S/M", "M/L", "equal_medium", "wide_medium_negative_skew", "medium_sharp_negative_skew", "medium_wide_positive_skew", "sharp_medium_positive_skew"]
 
 samples_per_condition = 1000
@@ -58,22 +61,21 @@ samples_per_ambiguous_condition = 400
 cluster_dict = get_index_per_class(amplitude_conditions,time_constant_conditions, ambiguous_conditions, samples_per_condition, samples_per_ambiguous_condition)
 
 true_labels = get_labels(data, cluster_dict)
-clusters_ordered = list(range(0,13))
-layout_label_mapping = labels_to_layout_mapping(clusters_ordered, 4, (1,4))
-
-
-#-------------------------------------------- Prediction Strength ------------------------------------------------------
-
-prediction_strength_dir = "Toy_data/Clearly_Separated/Prediction_Strength/"
-eigenvalue_dir = "Toy_data/Clearly_Separated/Eigenvalues/"
+clusters_ordered = list(range(0,len(cluster_dict)+1))
+layout_label_mapping = labels_to_layout_mapping(clusters_ordered, 9, (2,5))
 
 
 train_fold_indices, train_fold_indices = training_set_split.get_training_folds(data, cluster_dict,cluster_wise=True,folds = 2)
 training_set = data[train_fold_indices[0]]
 validation_set = data[train_fold_indices[1]]
 
-ks = [10]#[5,10]
-regs = [1,5,10, 20, 50, 100, "heuristic"]#[None, 0.01, 0.1, 1, 5, 10, 20, 50, 100, "heuristic"]
+#-------------------------------------------- Eigenvalues and Clusters -------------------------------------------------
+"""
+prediction_strength_dir = "Toy_data/Ambiguous/Ambiguous_Tau_Amplitude/Prediction_Strength/"
+
+
+ks = [10]
+regs = [None, 0.01, 0.1, 1, 5, 10, 20, 50, 100, "heuristic"]
 
 for k in ks:
     for reg in regs:
@@ -96,55 +98,87 @@ for k in ks:
             valid_labels[i+1] = validation_set_labels[i]
 
 
-        subplot_adjustments = [0.05, 0.95, 0.05, 0.87, 0.35, 0.18]#[0.05,0.95,0.03,0.9,0.4, 0.15]
-        figsize = (30,20) #(20,20)
+        subplot_adjustments = [0.05,0.93,0.02,0.92,0.9, 0.2] #[0.05, 0.95, 0.05, 0.87, 0.35, 0.18]#[0.05,0.95,0.03,0.9,0.4, 0.15]
+        figsize = (40,30)#(30,20) #(20,20)
 
-        functions_for_plotting.plot_eigenvalues(training_set_eigenvalues, true_cutoff=12, eigenvalue_range=[0,100],figsize = (20,10), savefile="training_set_eigenvalues_k=%d_reg=%s.pdf" % (k,reg),configuration = "k=%d, $\lambda$=%s - Training Set" % (k,str(reg_train)))
-        functions_for_plotting.plot_eigenvalues(validation_set_eigenvalues, true_cutoff=12, eigenvalue_range=[0,100],figsize = (20,10), savefile ="validation_set_eigenvalues_k=%d_reg=%s.pdf" % (k,reg),configuration = "k=%d, $\lambda$=%s - Validation Set" % (k,str(reg_valid)))
+        functions_for_plotting.plot_eigenvalues(training_set_eigenvalues, true_cutoff=45, eigenvalue_range=[0,100], save_file="training_set_eigenvalues_k=%d_reg=%s.pdf" % (k,reg),configuration = "k=%d, $\lambda$=%s - Training Set" % (k,str(reg_train)))
+        functions_for_plotting.plot_eigenvalues(validation_set_eigenvalues, true_cutoff=45, eigenvalue_range=[0,100], save_file ="validation_set_eigenvalues_k=%d_reg=%s.pdf" % (k,reg),configuration = "k=%d, $\lambda$=%s - Validation Set" % (k,str(reg_valid)))
 
-
-        functions_for_plotting.plot_clusters(training_set, true_labels[train_fold_indices[0]],train_labels[12], 3,4, layout_label_mapping,figsize=figsize,n_bursts = 100,y_lim = (0,16),savefile="training_set_clusters_k=%d_reg=%s.pdf" % (k,reg),subplot_adjustments= subplot_adjustments, title= "Training Set Clusters \n k=%d, $\lambda$=%s" % (k,str(reg_train)))
-        functions_for_plotting.plot_clusters(validation_set, true_labels[train_fold_indices[1]],valid_labels[12], 3,4, layout_label_mapping,figsize=figsize,n_bursts = 100,y_lim = (0,16),savefile="validation_set_clusters_k=%d_reg=%s.pdf" % (k,reg), subplot_adjustments= subplot_adjustments, title= "Validation Set Clusters \n k=%d, $\lambda$=%s" % (k,str(reg_valid)))
-
+        functions_for_plotting.plot_clusters(training_set, true_labels[train_fold_indices[0]],train_labels[45], 10,5, layout_label_mapping,figsize=figsize,n_bursts = 100,y_lim = (0,16),save_file="training_set_clusters_k=%d_reg=%s.pdf" % (k,reg),subplot_adjustments= subplot_adjustments, title= "Training Set Clusters \n k=%d, $\lambda$=%s" % (k,str(reg_train)))
+        functions_for_plotting.plot_clusters(validation_set, true_labels[train_fold_indices[1]],valid_labels[45], 10,5, layout_label_mapping,figsize=figsize,n_bursts = 100,y_lim = (0,16),save_file="validation_set_clusters_k=%d_reg=%s.pdf" % (k,reg), subplot_adjustments= subplot_adjustments, title= "Validation Set Clusters \n k=%d, $\lambda$=%s" % (k,str(reg_valid)))
 
 
+"""
+#-------------------------------------------- Prediction Strength ------------------------------------------------------
+def main():
+    prediction_strength_dir = "Toy_data/Clearly_Separated/Prediction_Strength/"#Toy_data/Ambiguous/Ambiguous_Tau_Amplitude/Prediction_Strength/"
+
+    ks = [5,10]
+    regs = [None, 0.01, 0.1, 1, 5, 10, "heuristic"]
+
+
+    for k in ks:
+        for reg in regs:
+            training_set_labels = np.load(prediction_strength_dir + "Labels/labels_k=%d_reg=%s_training.npy" % (k, str(reg)))
+            validation_set_labels = np.load(prediction_strength_dir + "Labels/labels_k=%d_reg=%s_validation.npy" % (k, str(reg)))
+            if reg == "heuristic":
+                reg_train = np.round(np.load(prediction_strength_dir + "k=%d_quin_rohe_heuristic_lambda_training.npy" % k), 2)
+                reg_valid = np.round(np.load(prediction_strength_dir + "k=%d_quin_rohe_heuristic_lambda_validation.npy" % k), 2)
+            else:
+                reg_train = reg
+                reg_valid = reg
+
+            train_labels = {}
+            valid_labels = {}
+            for i, labels in enumerate(training_set_labels):
+                train_labels[i+1] = labels
+                valid_labels[i+1] = validation_set_labels[i]
+
+
+            validation_prediction_strengths, validation_cluster_sizes = prediction_strength.get_prediction_strength_per_k(data, train_fold_indices[0], train_fold_indices[1], train_labels, valid_labels, per_sample = False)
+            training_prediction_strengths, training_cluster_sizes = prediction_strength.get_prediction_strength_per_k(data, train_fold_indices[1], train_fold_indices[0], valid_labels, train_labels, per_sample = False)
+
+            np.save("Toy_data/Clearly_Separated/Prediction_Strength/validation_set_prediction_strength_k=%d_reg=%s.npy" % (k,reg_valid), validation_prediction_strengths)
+            np.save("Toy_data/Clearly_Separated/Prediction_Strength/validation_set_cluster_sizes_k=%d_reg=%s.npy" % (k,reg_valid),validation_cluster_sizes)
+            np.save("Toy_data/Clearly_Separated/Prediction_Strength/training_set_prediction_strength_k=%d_reg=%s.npy" % (k,reg_train), training_prediction_strengths)
+            np.save("Toy_data/Clearly_Separated/Prediction_Strength/training_set_cluster_sizes_k=%d_reg=%s.npy" % (k,reg_train),training_cluster_sizes)
+
+            threshold = 0.8
+            n_total = 6000
+            #color=sns.color_palette('Reds', 55, )[::-1]
+            #figsize=(20,10)
+
+            #functions_for_plotting.plot_prediction_strength(validation_prediction_strengths,validation_cluster_sizes,figsize=figsize, color=color,save_file="validation_set_prediction_strength_k=%d_reg=%s.pdf" % (k,reg_valid), title = "Prediction Strength per Cluster\n(Validation Set)")
+            #functions_for_plotting.plot_prediction_strength(training_prediction_strengths,training_cluster_sizes,figsize=figsize, color=color,save_file="training_set_prediction_strength_k=%d_reg=%s.pdf" % (k,reg_train), title = "Prediction Strength per Cluster\n(Training Set)")
+
+            #functions_for_plotting.plot_mean_prediction_strengths(validation_prediction_strengths,threshold=None,save_file="validation_set_mean_prediction_strength_k=%d_reg=%s.pdf" % (k,reg_valid), title = "Mean Prediction Strength\n(Validation Set)")
+            #functions_for_plotting.plot_mean_prediction_strengths(training_prediction_strengths,threshold=None,save_file="training_set_mean_prediction_strength_k=%d_reg=%s.pdf" % (k,reg_train), title = "Mean Prediction Strength\n(Training Set)")
+
+            validation_low_clusters, validation_low_cluster_sizes, validation_low_cluster_sizes_percent = prediction_strength.get_clusters_below_threshold(validation_prediction_strengths, validation_cluster_sizes, threshold=threshold)
+            training_low_clusters, training_low_cluster_sizes, training_low_cluster_sizes_percent = prediction_strength.get_clusters_below_threshold(training_prediction_strengths, training_cluster_sizes, threshold=threshold)
+
+            functions_for_plotting.plot_number_bursts_in_low_clusters_per_k(validation_low_cluster_sizes,k_clusters=list(range(1,21)),n_total=n_total,threshold=threshold,save_file="Toy_data/Clearly_Separated/Prediction_Strength/validation_clusters_below_threshold_k=%d_reg=%s.pdf" % (k,reg_valid))
+            functions_for_plotting.plot_number_bursts_in_low_clusters_per_k(training_low_cluster_sizes,k_clusters=list(range(1,21)),n_total=n_total,threshold=threshold,save_file="Toy_data/Clearly_Separated/Prediction_Strength/training_clusters_below_threshold_k=%d_reg=%s.pdf" % (k,reg_train))
+
+
+            validation_prediction_strength_per_sample, validation_cluster_sizes_per_sample = prediction_strength.get_prediction_strength_per_k(data, train_fold_indices[0], train_fold_indices[1], train_labels, valid_labels, per_sample = True)
+            training_prediction_strength_per_sample, training_cluster_sizes_per_sample = prediction_strength.get_prediction_strength_per_k(data, train_fold_indices[1], train_fold_indices[0], valid_labels, train_labels, per_sample = True)
+            
+            np.save("Toy_data/Clearly_Separated/Prediction_Strength/validation_set_prediction_strength_per_sample_k=%d_reg=%s.npy" % (k,reg_valid), validation_prediction_strength_per_sample)
+            np.save("Toy_data/Clearly_Separated/Prediction_Strength/validation_set_cluster_sizes_per_sample_k=%d_reg=%s.npy" % (k,reg_valid),validation_cluster_sizes_per_sample)
+            np.save("Toy_data/Clearly_Separated/Prediction_Strength/training_set_prediction_strength_per_sample_k=%d_reg=%s.npy" % (k,reg_train), training_prediction_strength_per_sample)
+            np.save("Toy_data/Clearly_Separated/Prediction_Strength/training_set_cluster_sizes_per_sample_k=%d_reg=%s.npy" % (k,reg_train),training_cluster_sizes_per_sample)
+            
+            
+            _, validation_low_points_in_clusters_sizes, _, _, validation_low_ps_per_sample_per_k, _, _, _ = prediction_strength.get_points_in_clusters_below_and_above_threshold(data,validation_prediction_strength_per_sample, train_fold_indices[1], valid_labels, threshold)
+            _, training_low_points_in_clusters_sizes, _, _, training_low_ps_per_sample_per_k, _, _, _ = prediction_strength.get_points_in_clusters_below_and_above_threshold(data,training_prediction_strength_per_sample, train_fold_indices[0], train_labels, threshold)
+
+            functions_for_plotting.plot_number_burst_with_low_prediction_strength_per_k(validation_low_points_in_clusters_sizes,validation_low_ps_per_sample_per_k,n_total=n_total,k_clusters=list(range(1,21)),threshold=threshold,plot_proportion=False, plot_mean_low_ps = True,save_file="Toy_data/Clearly_Separated/Prediction_Strength/validation_individual_points_below_threshold_k=%d_reg=%s.pdf" % (k,reg_valid))
+            functions_for_plotting.plot_number_burst_with_low_prediction_strength_per_k(training_low_points_in_clusters_sizes,training_low_ps_per_sample_per_k,n_total=n_total,k_clusters=list(range(1,21)),threshold=threshold,plot_proportion=False, plot_mean_low_ps = True,save_file="Toy_data/Clearly_Separated/Prediction_Strength/training_individual_points_below_threshold_k=%d_reg=%s.pdf" % (k,reg_train))
 
 
 
 
-
-prediction_strengths, cluster_sizes = prediction_strength.get_prediction_strength_per_k(data, train_fold_indices[0], train_fold_indices[1], train_labels, valid_labels, per_sample = False)
-prediction_strength_per_sample, cluster_sizes_per_sample = prediction_strength.get_prediction_strength_per_k(data, train_fold_indices[0], train_fold_indices[1], train_labels, valid_labels, per_sample = True)
-
-
-test = {}
-test_per_sample = {}
-test_sizes = {}
-test_size_per_sample = {}
-for key in prediction_strengths.keys():
-    if key <= 20:
-        test[key] = prediction_strengths[key]
-        test_per_sample[key] = prediction_strength_per_sample[key]
-        test_sizes[key] = cluster_sizes[key]
-        test_size_per_sample[key] = cluster_sizes_per_sample[key]
-
-importlib.reload(prediction_strength)
-#low_clusters, low_cluster_sizes, low_cluster_sizes_percent = prediction_strength.get_clusters_below_threshold(test, test_sizes, 0.8)
-low_points_in_clusters, low_points_in_clusters_sizes, low_points_in_clusters_percent, low_points_labels, low_ps_per_sample_per_k, high_points_in_clusters, high_points_labels, high_ps_per_sample_per_k = prediction_strength.get_points_in_clusters_below_and_above_threshold(data,test_per_sample, train_fold_indices[1], valid_labels, 0.9)
-
-
-
-
-
-
-
-import matplotlib.pyplot as plt
-plt.close("all")
-#functions_for_plotting.plot_mean_prediction_strengths(test, test_sizes,threshold=None,title = "")
-importlib.reload(functions_for_plotting)
-plt.close("all")
-
-functions_for_plotting.plot_number_burst_with_low_prediction_strength_per_k(low_points_in_clusters_sizes,low_ps_per_sample_per_k,6000,0.5, plot_proportion=False, plot_mean_low_ps = True)
-
-#functions_for_plotting.plot_prediction_strength(test,test_sizes)
+if __name__== "__main__":
+  main()
 
