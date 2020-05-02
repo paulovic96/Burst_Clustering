@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 from itertools import combinations_with_replacement
 from itertools import permutations
 from sklearn.neighbors.nearest_centroid import NearestCentroid
+from math import factorial
+
 
 def get_co_membership_matrix(labels):
     """ Construct co-membership matrix
@@ -274,4 +276,83 @@ def get_points_in_clusters_below_and_above_threshold(data, predictions_strengths
     return low_predictive_points_in_clusters_per_k, low_predictive_points_in_clusters_per_k_sizes, low_predictive_points_in_clusters_per_k_percent, low_predictive_points_labels_per_k,low_ps_per_sample_per_k, high_predictive_points_in_clusters_per_k, high_predictive_points_labels_per_k, high_ps_per_sample_per_k
 
 
+def get_confusion_matrix(labels_fitted, labels_centroids_based, unique_valid_labels, unique_centroid_labels):
+    """
+    True positives: same cluster in training, same cluster in validation
+    False positives: different cluster in training, same cluster in validation
+    True negatives: different cluster in training, different cluster in validation
+    False negatives: same cluster in training, different cluster in validation
+    """
 
+    A_valid_indices = [np.where(labels_fitted == i)[0] for i in
+                       unique_valid_labels]  # get indices for each clusters in validation data
+    A_centroid_indices = [np.where(labels_centroids_based == i)[0] for i in unique_centroid_labels]
+
+    valid_cluster_sizes = [len(A) for A in A_valid_indices]  # get size of each cluster
+    centroid_cluster_sizes = [len(A) for A in A_centroid_indices]
+
+    co_membership_matrix_validation = get_co_membership_matrix(labels_fitted)
+    co_membership_matrix_centroids = get_co_membership_matrix(
+        labels_centroids_based)  # compute co-membership for validation data labeld by nearest centroid
+
+    true_positives = []
+    false_positives = []
+    false_negatives = []
+
+    for i, c in enumerate(unique_valid_labels):
+        A_i = A_valid_indices[i]  # cluster_i indices
+        true_positives_c = 0
+        false_positives_c = 0
+
+        for x1x2 in permutations(A_i, 2):  # get each pair of different bursts in cluster
+            same_cluster_with_training_centroids = co_membership_matrix_centroids[x1x2[0], x1x2[1]]
+
+            if same_cluster_with_training_centroids:
+                true_positives_c += 1
+            else:
+                false_positives_c += 1
+
+        true_positives.append(true_positives_c)
+        false_positives.append(false_positives_c)
+
+    for i, c in enumerate(unique_centroid_labels):
+        A_i = A_centroid_indices[i]  # cluster_i indices
+        false_negatives_c = 0
+
+        for x1x2 in permutations(A_i, 2):  # get each pair of different bursts in cluster
+            same_cluster_in_validation = co_membership_matrix_validation[x1x2[0], x1x2[1]]
+            if not same_cluster_in_validation:
+                false_negatives_c += 1
+
+        false_negatives.append(false_negatives_c)
+
+    true_positives = np.sum(true_positives)
+    false_positives = np.sum(false_positives)
+    false_negatives = np.sum(false_negatives)
+    true_negatives = (factorial(len(labels_fitted)) / factorial(len(labels_fitted) - 2)) - (
+                true_positives + false_positives + false_negatives)
+
+    # sum(1 for ignore in it)len(list(permutations(range(len(labels_fitted)), 2)))
+
+    return true_positives, false_positives, true_negatives, false_negatives
+
+
+def get_precision(true_positives, false_positives):
+    """
+    True Positives / (True Positives + False Positives)
+
+    """
+
+    return true_positives / (true_positives + false_positives)
+
+
+def get_recall(true_positives, false_negatives):
+    """
+    True Positives / (True Positives + False Negatives)
+
+    """
+    return true_positives / (true_positives + false_negatives)
+
+def get_F1_score(recall, precision):
+    f1 = 2 * (precision * recall) / (precision + recall)
+    return f1
