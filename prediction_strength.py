@@ -108,7 +108,7 @@ def calculate_prediction_strength_per_sample(labels_fitted, labels_centroids_bas
     return cluster_prediction_strengths_per_sample, cluster_sizes
 
 
-def get_prediction_strength_per_k(data, train_indices, valid_indices, train_labels, valid_labels, per_sample = False):
+def get_prediction_strength_per_k(data, train_indices, valid_indices, train_labels, valid_labels, per_sample = False, true_train_labels = None):
     """ Calculate prediction strength for each cluster obtained by clustering with k clusters
     Args:
         data (nd.array): Array containing data (n x m)
@@ -139,7 +139,10 @@ def get_prediction_strength_per_k(data, train_indices, valid_indices, train_labe
     validation_set = data[valid_indices]
 
     for k in k_clusters:
-        train_labels_k = train_labels[k]
+        if not true_train_labels is None:
+            train_labels_k = true_train_labels
+        else:
+            train_labels_k = train_labels[k]
         valid_labels_k = valid_labels[k]
 
         if k > 1:
