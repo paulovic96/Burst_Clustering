@@ -68,7 +68,7 @@ def calculate_prediction_strength(labels_fitted, labels_centroids_based, unique_
         for x1x2 in permutations(A_i, 2):  # get each pair of different bursts in cluster
             co_membership_sum += co_membership_matrix_centroids[x1x2[0], x1x2[1]] #check whether data from fitted validation set fall in same clusters based on training centroids
 
-        if cluster_sizes[i] <1:  # no or only one burst in cluster
+        if cluster_sizes[i] <=1:  # no or only one burst in cluster
             prediction_sterngth_c = 0
         else:
             prediction_sterngth_c = 1 / (cluster_sizes[i] * (cluster_sizes[i] - 1)) * co_membership_sum  # prediction strength for cluster_i weighted by cluster size
@@ -126,7 +126,7 @@ def get_prediction_strength_per_k(data, train_indices, valid_indices, train_labe
         prediction_strengths_per_k (dict): dictionary containing the prediction strength for each cluster/sample in c after clustering into k clusters
     """
 
-    k_clusters = list(train_labels.keys())
+    k_clusters = list(valid_labels.keys())
     prediction_strengths_per_k = {} # key: k (number of clusters in clustering) value: prediction strength for each cluster i/ each point in cluster i
     cluster_sizes_per_k = {}
 
@@ -332,10 +332,8 @@ def get_confusion_matrix(labels_fitted, labels_centroids_based, unique_valid_lab
     true_positives = np.sum(true_positives)
     false_positives = np.sum(false_positives)
     false_negatives = np.sum(false_negatives)
-    true_negatives = (factorial(len(labels_fitted)) / factorial(len(labels_fitted) - 2)) - (
-                true_positives + false_positives + false_negatives)
+    true_negatives = (factorial(len(labels_fitted)) / factorial(len(labels_fitted) - 2)) - (true_positives + false_positives + false_negatives)
 
-    # sum(1 for ignore in it)len(list(permutations(range(len(labels_fitted)), 2)))
 
     return true_positives, false_positives, true_negatives, false_negatives
 
