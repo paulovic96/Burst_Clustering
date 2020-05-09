@@ -199,3 +199,53 @@ functions_for_plotting.plot_clusters(training_set, true_labels[train_fold_indice
 
 
 functions_for_plotting.plot_clusters(data[validation_low_points_in_clusters[15]], true_labels[validation_low_points_in_clusters[15]],low_predictive_points_labels[15], 3,4, layout_label_mapping,figsize=(30,20),n_bursts = 100,y_lim = (0,16),save_file="validation_set_clusters_k=%d_reg=%s_k_clusters=15_below=%.1f.pdf" %(k,str(reg),threshold) ,subplot_adjustments= [0.05,0.95,0.03,0.9,0.3, 0.15], title= "Validation Set Clusters below threshold=%.1f \n k=%d, $\lambda$=%s" % (threshold,k,str(reg_valid)))
+
+
+k = 10
+reg = 0.005
+
+clear_prediction_strength_dir = "Toy_data/Clearly_Separated/Prediction_Strength/"
+ambig_prediction_strength_dir = "Toy_data/Ambiguous/Ambiguous_Tau_Amplitude/Prediction_Strength/"
+
+# clear_training_set_labels = np.load(clear_prediction_strength_dir + "Labels/labels_k=%d_reg=%s_training.npy" % (k, str(reg)))
+# clear_validation_set_labels = np.load(clear_prediction_strength_dir + "Labels/labels_k=%d_reg=%s_validation.npy" % (k, str(reg)))
+
+ambig_training_set_labels = np.load(
+    ambig_prediction_strength_dir + "Labels/labels_k=%d_reg=%s_training.npy" % (k, str(reg)))
+ambig_validation_set_labels = np.load(
+    ambig_prediction_strength_dir + "Labels/labels_k=%d_reg=%s_validation.npy" % (k, str(reg)))
+
+# clear_train_labels = {}
+# clear_valid_labels = {}
+# for i, labels in enumerate(clear_training_set_labels):
+#    clear_train_labels[i+1] = labels
+#    clear_valid_labels[i+1] = clear_validation_set_labels[i]
+
+ambig_train_labels = {}
+ambig_valid_labels = {}
+for i, labels in enumerate(ambig_training_set_labels):
+    ambig_train_labels[i + 1] = labels
+    ambig_valid_labels[i + 1] = ambig_validation_set_labels[i]
+
+
+clusters_from_ambig_dataset, counts = np.unique(ambig_true_labels, return_counts=True)
+clear_clusters_from_ambig = clusters_from_ambig_dataset[np.where(counts!= 400)]
+clear_clusters_from_ambig_idx_validation = np.where(np.isin(ambig_true_labels_validation,clear_clusters_from_ambig) == True)[0]
+clear_clusters_from_ambig_idx_training = np.where(np.isin(ambig_true_labels_training,clear_clusters_from_ambig) == True)[0]
+ambig_clear_train_inidices = ambig_train_fold_indices[0][clear_clusters_from_ambig_idx_training]
+ambig_clear_valid_inidices = ambig_train_fold_indices[1][clear_clusters_from_ambig_idx_validation]
+ambig_clear_valid_labels = {}
+for i, labels in enumerate(ambig_validation_set_labels):
+    ambig_clear_valid_labels[i+1] = labels[clear_clusters_from_ambig_idx_validation]
+
+ambig_clear_true_train_labels = ambig_true_labels_training[clear_clusters_from_ambig_idx_training]
+
+k = 10
+reg = 0.005
+k_clusters = 12
+save_file_clusters = "F1_clusters_k=%d_reg=%s_ambig_balanced_true_kclusters=%d.pdf" % (k,str(reg),k_clusters)
+
+functions_for_plotting.plot_clusters(ambig_validation_set, ambig_true_labels[ambig_train_fold_indices[1]],ambig_valid_labels[k_clusters], 10,5, ambig_layout_label_mapping,figsize=(40,30),n_bursts = 100,y_lim = (0,16),save_file=save_file_clusters ,subplot_adjustments= [0.05,0.93,0.02,0.92,0.9, 0.2], plot_mean=False, title= "Validation Set Clusters \n k=%d, $\lambda$=%s" % (k,str(reg)))
+
+save_file_clusters = "F1_clusters_k=%d_reg=%s_ambig_balanced_true_kclusters=%d_clear_clusters.pdf" % (k,str(reg),k_clusters)
+functions_for_plotting.plot_clusters(ambig_data[ambig_clear_valid_inidices], ambig_true_labels[ambig_clear_valid_inidices],ambig_clear_valid_labels[k_clusters], 10,5, ambig_layout_label_mapping,figsize=(40,30),n_bursts = 100,y_lim = (0,16),save_file=save_file_clusters ,subplot_adjustments= [0.05,0.93,0.02,0.92,0.9, 0.2], plot_mean=False, title= "Validation Set Clusters \n k=%d, $\lambda$=%s" % (k,str(reg)))

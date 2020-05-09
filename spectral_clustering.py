@@ -65,7 +65,7 @@ def get_local_scaled_affinity_matrix(data, metric="euclidean", k=7):
 
 
 
-def construct_knn_graph(matrix,sorted_indices,k=10, mutual = False, weighting = None):
+def construct_knn_graph(matrix,sorted_indices,matrix_info,k=10, mutual = False,weighting = True):
     """ Constuct KNN Graph from distance/similarity matrix
 
     Args:
@@ -79,11 +79,24 @@ def construct_knn_graph(matrix,sorted_indices,k=10, mutual = False, weighting = 
         A (nd.arrays): Adjacency matrix of the knn-graph
     """
     A = np.zeros(matrix.shape)
+
+    if mutual:
+        if matrix_info == "similarity":
+            print("Build mutual KNN-Graph based on Similarity of data points!")
+        else:
+            print("Build mutual KNN-Graph based on Distance of data points!")
+    else:
+        if matrix_info == "similarity":
+            print("Build symmetric KNN-Graph based on Similarity of data points!")
+        else:
+            print("Build symmetric KNN-Graph based on Distance of data points!")
+
+    print("Weighting:", weighting)
     if mutual: # knn graph only when among both knn connect
         for i, indices in enumerate(sorted_indices):
-            if weighting == "similarity":
+            if matrix_info == "similarity":
                 k_nearest = indices[-(k+1) : -1]
-            else:
+            else: #matrix_info == "distance":
                 k_nearest = indices[1:k+1]
             for j in k_nearest:
                 if i in sorted_indices[j,1:k+1]:
@@ -92,15 +105,14 @@ def construct_knn_graph(matrix,sorted_indices,k=10, mutual = False, weighting = 
                     else:
                         A[i,j] = 1
     else:
-        for i,indices in enumerate(sorted_indices):
-            if weighting == "similarity":
-                k_nearest = indices[-(k+1) : -1]
-                A[i,k_nearest] = matrix[i,k_nearest]
-                A[k_nearest,i] = matrix[k_nearest,i]
-            else:
-                k_nearest = indices[1:k+1]
 
-            if weighting=="distance":
+        for i,indices in enumerate(sorted_indices):
+            if matrix_info == "similarity":
+                k_nearest = indices[-(k+1) : -1]
+            else: # matrix_info == "distance":
+                k_nearest = indices[1:k + 1]
+
+            if weighting:
                 A[i,k_nearest] = matrix[i,k_nearest]
                 A[k_nearest,i] = matrix[k_nearest,i]
             else:
@@ -213,18 +225,17 @@ def cluster_eigenvector_embedding(eigenvec, n_cluster):
     return labels
 
 
-def spectral_clustering(data, metric, n_clusters,  k=5, mutual = False, weighting = None, normalize = True, use_lambda_heuristic = False, reg_lambda = 0.1, saving_lambda_file= "data/quin_rohe_heuristic_lambda",save_laplacian = False, save_eigenvalues_and_vectors = False):
+def spectral_clustering(data, metric, metric_info,n_clusters,  k=5, mutual = False, weighting = False, normalize = True, use_lambda_heuristic = False, reg_lambda = 0.1, saving_lambda_file= "data/quin_rohe_heuristic_lambda",save_laplacian = False, save_eigenvalues_and_vectors = False):
     """ Cluster data into n_clusters using spectral clustering  based on eigenvectors of knn-graph laplacian
 
     Args:
         data (nd.array): Array containing data (n x m)
         metric (string, or callable): one of sklearns pairwise metrics : https://scikit-learn.org/stable/modules/generated/sklearn.metrics.pairwise_distances.html#sklearn.metrics.pairwise_distances
         n_cluster (list): list of number of n_clusters
-
+        metric_info (string): indicate whether matrix contains similarities or distances
         k (int): number of neighbours to take into account
         mutual (bool): Wether to construct knn in mutual manner or not. Mutual in sense of: j beeing in k-nearest neighbours of i does not imply that i is in k-nearest neighbours of j. All vertices in a mutual k-NN graph have a degree upper-bounded by k.
-        weighting (str): indicate wether matrix contains of similarities or distances
-
+        weighting (bool): weighted edges in KNN - Graph
         normalize(bool): Wether to normalize Laplacian
         use_lambda_heuristic (bool): apply Qin Rohe heuristic for lambda
         saving_lambda_file:  File name for saving
@@ -244,7 +255,7 @@ def spectral_clustering(data, metric, n_clusters,  k=5, mutual = False, weightin
     else:
         dist_matrix, sorted_dist_matrix = calculate_dist_matrix(data, metric)
 
-    A = construct_knn_graph(dist_matrix,sorted_dist_matrix,k=k, mutual = mutual, weighting = weighting)
+    A = construct_knn_graph(dist_matrix,sorted_dist_matrix,metric_info, k=k, mutual = mutual, weighting = weighting)
 
     L = calculate_normalized_laplacian(A, normalize = normalize, reg_lambda=reg_lambda, use_lambda_heuristic=use_lambda_heuristic, saving_lambda_file=saving_lambda_file, saving = save_laplacian, saving_file = "data/L_norm")
 
