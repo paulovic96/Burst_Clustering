@@ -225,7 +225,7 @@ def cluster_eigenvector_embedding(eigenvec, n_cluster):
     return labels
 
 
-def spectral_clustering(data, metric, metric_info,n_clusters,  k=5, mutual = False, weighting = False, normalize = True, use_lambda_heuristic = False, reg_lambda = 0.1, saving_lambda_file= "data/quin_rohe_heuristic_lambda",save_laplacian = False, save_eigenvalues_and_vectors = False):
+def spectral_clustering(data, metric, metric_info,n_clusters,precomputed_matrix=None, k=5, mutual = False, weighting = False, normalize = True, use_lambda_heuristic = False, reg_lambda = 0.1, saving_lambda_file= "data/quin_rohe_heuristic_lambda",save_laplacian = False, save_eigenvalues_and_vectors = False):
     """ Cluster data into n_clusters using spectral clustering  based on eigenvectors of knn-graph laplacian
 
     Args:
@@ -252,6 +252,10 @@ def spectral_clustering(data, metric, metric_info,n_clusters,  k=5, mutual = Fal
 
     if metric == "local_scaled_affinity":
         dist_matrix, sorted_dist_matrix = get_local_scaled_affinity_matrix(data,k=7)
+
+    if metric == "precomputed":
+        dist_matrix = precomputed_matrix
+        sorted_dist_matrix = np.argsort(precomputed_matrix)
     else:
         dist_matrix, sorted_dist_matrix = calculate_dist_matrix(data, metric)
 

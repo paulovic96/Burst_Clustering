@@ -2,8 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from itertools import combinations_with_replacement
 from itertools import permutations
+from itertools import product
 from sklearn.neighbors.nearest_centroid import NearestCentroid
 from math import factorial
+
 
 
 def get_co_membership_matrix(labels):
@@ -357,3 +359,139 @@ def get_recall(true_positives, false_negatives):
 def get_F1_score(recall, precision):
     f1 = 2 * (precision * recall) / (precision + recall)
     return f1
+
+
+def get_F1_score_per_k(data, train_indices, valid_indices, train_labels, valid_labels, combination_type="full",
+                       true_train_labels=None, own_combinations=None):
+    k_clusters = list(valid_labels.keys())
+    training_set = data[train_indices]
+    validation_set = data[valid_indices]
+
+    if combination_type == "true":
+        print("Calculate F1 score based on true training centroids!")
+        if not true_train_labels is None:
+            true_F1_score_per_k = {}
+            for k in k_clusters:
+                train_labels_k = true_train_labels
+                valid_labels_k = valid_labels[k]
+
+                if len(np.unique(train_labels_k)) > 1:
+                    centroids_k, labels_centroids_based = calculate_centroids_and_predict_validation_data(training_set,
+                                                                                                          train_labels_k,
+                                                                                                          validation_set)
+
+                else:
+                    labels_centroids_based = np.zeros(len(validation_set))
+
+                unique_valid_labels = list(range(k))
+                unique_centroid_labels = list(np.unique(train_labels_k))
+
+                true_positives, false_positives, true_negatives, false_negatives = get_confusion_matrix(valid_labels_k,
+                                                                                                        labels_centroids_based,
+                                                                                                        unique_valid_labels,
+                                                                                                        unique_centroid_labels)
+                precision = get_precision(true_positives, false_positives)
+                recall = get_recall(true_positives, false_negatives)
+                f1 = get_F1_score(recall, precision)
+
+                true_F1_score_per_k[k] = f1
+
+            return true_F1_score_per_k
+        else:
+            print("True labels for the training set not found..Please provide true labels!!")
+
+    elif combination_type == "equal":
+        print("Calculate F1 score based on training centroids assuming same number of clusters in both sets!")
+        F1_score_per_k = {}
+        for k in k_clusters:
+            train_labels_k = train_labels[k]
+            valid_labels_k = valid_labels[k]
+
+            if k > 1:
+                centroids_k, labels_centroids_based = calculate_centroids_and_predict_validation_data(training_set,
+                                                                                                      train_labels_k,
+                                                                                                      validation_set)
+
+            else:
+                labels_centroids_based = np.zeros(len(validation_set))
+
+            unique_valid_labels = list(range(k))
+            unique_centroid_labels = list(range(k))
+
+            true_positives, false_positives, true_negatives, false_negatives = get_confusion_matrix(valid_labels_k,
+                                                                                                    labels_centroids_based,
+                                                                                                    unique_valid_labels,
+                                                                                                    unique_centroid_labels)
+            precision = get_precision(true_positives, false_positives)
+            recall = get_recall(true_positives, false_negatives)
+            f1 = get_F1_score(recall, precision)
+
+            F1_score_per_k[k] = f1
+
+        return F1_score_per_k
+
+
+    elif combination_type == "full":
+        print("Calculate F1 score based on training centroids with full permutation of possible clusters in both sets!")
+        F1_score_per_k_combination = {}
+        counter = 0
+        for k1k2 in product(k_clusters, repeat=2):
+            counter += 1
+            if counter % 50 == 0:
+                print("Step:%d" % counter)
+            train_labels_k = train_labels[k1k2[0]]
+            valid_labels_k = valid_labels[k1k2[1]]
+
+            if k1k2[0] > 1:
+                centroids_k, labels_centroids_based = calculate_centroids_and_predict_validation_data(training_set,
+                                                                                                      train_labels_k,
+                                                                                                      validation_set)
+
+            else:
+                labels_centroids_based = np.zeros(len(validation_set))
+
+            unique_valid_labels = list(range(k1k2[1]))
+            unique_centroid_labels = list(range(k1k2[0]))
+
+            true_positives, false_positives, true_negatives, false_negatives = get_confusion_matrix(valid_labels_k,
+                                                                                                    labels_centroids_based,
+                                                                                                    unique_valid_labels,
+                                                                                                    unique_centroid_labels)
+            precision = get_precision(true_positives, false_positives)
+            recall = get_recall(true_positives, false_negatives)
+            f1 = get_F1_score(recall, precision)
+
+            F1_score_per_k_combination[k1k2] = f1
+
+        return F1_score_per_k_combination
+
+    elif combination_type == "own":
+        print(
+            "Calculate F1 score based on training centroids with provided combination of possible clusters in both sets!")
+        F1_score_per_k_combination = {}
+        for k1k2 in own_combinations:
+            train_labels_k = train_labels[k1k2[0]]
+            valid_labels_k = valid_labels[k1k2[1]]
+
+            if k1k2[0] > 1:
+                centroids_k, labels_centroids_based = calculate_centroids_and_predict_validation_data(training_set,
+                                                                                                      train_labels_k,
+                                                                                                      validation_set)
+
+            else:
+                labels_centroids_based = np.zeros(len(validation_set))
+
+            unique_valid_labels = list(range(k1k2[1]))
+            unique_centroid_labels = list(range(k1k2[0]))
+
+            true_positives, false_positives, true_negatives, false_negatives = get_confusion_matrix(valid_labels_k,
+                                                                                                    labels_centroids_based,
+                                                                                                    unique_valid_labels,
+                                                                                                    unique_centroid_labels)
+            precision = get_precision(true_positives, false_positives)
+            recall = get_recall(true_positives, false_negatives)
+            f1 = get_F1_score(recall, precision)
+
+            F1_score_per_k_combination[k1k2] = f1
+
+        return F1_score_per_k_combination
