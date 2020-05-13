@@ -251,12 +251,15 @@ def spectral_clustering(data, metric, metric_info,n_clusters,precomputed_matrix=
 
 
     if metric == "local_scaled_affinity":
+        print("Calculate local scaled affinity matrix for constructing KNN-Graph")
         dist_matrix, sorted_dist_matrix = get_local_scaled_affinity_matrix(data,k=7)
 
-    if metric == "precomputed":
+    elif metric == "precomputed":
+        print("Use precomputed matrix for constructing KNN-Graph")
         dist_matrix = precomputed_matrix
-        sorted_dist_matrix = np.argsort(precomputed_matrix)
+        sorted_dist_matrix = np.argsort(precomputed_matrix,axis=1)
     else:
+        print("Calculate %s matrix for constructing KNN-Graph" % metric)
         dist_matrix, sorted_dist_matrix = calculate_dist_matrix(data, metric)
 
     A = construct_knn_graph(dist_matrix,sorted_dist_matrix,metric_info, k=k, mutual = mutual, weighting = weighting)
