@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 SAVE_DIR = "data"
-SAVE_FILE_NAME = "clearly_separated_data"
+SAVE_FILE_NAME = "ambiguous_data_equal_noise=[0,0.2]"
 
 
 # Amplitudes
@@ -18,12 +18,17 @@ SMALL_TAU = [0.001, 0.003]
 MEDIUM_TAU = [0.004, 0.019]
 LARGE_TAU = [0.02, 0.5]
 
+NOISE_TYPE = "gaussian"
+USE_EQUAL_NOISE = True
+
 # Noises
 SMALL_NOISE = [0, 0.02]
 SMALL_MEDIUM_NOISE = [0, 0.05]
 MEDIUM_NOISE = [0, 0.07]
 MEDIUM_LARGE_NOISE = [0, 0.11]
 LARGE_NOISE = [0, 0.14]
+
+EQUAL_NOISE = [0, 0.2]#[0, 1]#[0, 0.75]#[0, 0.5]#[0, 0.2]#[0, 0.14]#[0, 0.02]#[0, 0.05] #[0, 0.11]#[0, 0.07]
 
 
 # mu
@@ -33,13 +38,23 @@ TIME_RANGE = [0, 3500]
 
 # Conditions
 AMPLITUDE_CONDITIONS = ["S", "S/M", "M", "M/L", "L"]
+    #["S", "M", "L"]
+    #["S", "S/M", "M", "M/L", "L"]
 
 TIME_CONSTANT_CONDITIONS = ["equal_sharp", "equal_medium", "equal_wide", "wide_sharp_negative_skew",
                             "wide_medium_negative_skew", "medium_sharp_negative_skew", "sharp_wide_positive_skew",
                             "medium_wide_positive_skew", "sharp_medium_positive_skew"]
 
+    #["equal_sharp", "equal_wide", "wide_sharp_negative_skew", "sharp_wide_positive_skew"]
+    #["equal_sharp", "equal_medium", "equal_wide", "wide_sharp_negative_skew",
+    #                        "wide_medium_negative_skew", "medium_sharp_negative_skew", "sharp_wide_positive_skew",
+    #                        "medium_wide_positive_skew", "sharp_medium_positive_skew"]
+
 AMBIGUOUS_CONDITIONS = ["S/M", "M/L", "equal_medium", "wide_medium_negative_skew", "medium_sharp_negative_skew",
                         "medium_wide_positive_skew", "sharp_medium_positive_skew"]
+    #[]
+    #["S/M", "M/L", "equal_medium", "wide_medium_negative_skew", "medium_sharp_negative_skew",
+    #                    "medium_wide_positive_skew", "sharp_medium_positive_skew"]
 
 
 SAMPLES_PER_CONDITION = 1000
@@ -158,7 +173,7 @@ def generate_ALF(X, mu, amplitude_condition, time_constant_condition):
 
 
 
-def generate_ALF_data(X, amplitude_conditions, time_constant_conditions, ambiguous_conditions, samples_per_condition=1000,samples_per_ambiguous_condition=100, mu=1750):
+def generate_ALF_data(X, amplitude_conditions, time_constant_conditions, ambiguous_conditions, samples_per_condition=1000,samples_per_ambiguous_condition=100, mu=1750, noise_type = "gaussian", equal_noise = False):
     """
     Args:
         X (np.ndarray): Array of x values
@@ -201,15 +216,35 @@ def generate_ALF_data(X, amplitude_conditions, time_constant_conditions, ambiguo
 
                 f_i, tau1, tau2, lam = generate_ALF(X,mu=mu,amplitude_condition=amplitude_condition, time_constant_condition=time_constant_condition)
                 if amplitude_condition == "S":
-                    noise = np.random.normal(SMALL_NOISE[0], SMALL_NOISE[0], f_i.shape)
+                    if noise_type == "gaussian":
+                        if equal_noise:
+                            noise = np.random.normal(EQUAL_NOISE[0], EQUAL_NOISE[1], f_i.shape)
+                        else:
+                            noise = np.random.normal(SMALL_NOISE[0], SMALL_NOISE[1], f_i.shape)
                 elif amplitude_condition == "S/M":
-                    noise = np.random.normal(SMALL_MEDIUM_NOISE[0], SMALL_MEDIUM_NOISE[1], f_i.shape)
+                    if noise_type == "gaussian":
+                        if equal_noise:
+                            noise = np.random.normal(EQUAL_NOISE[0], EQUAL_NOISE[1], f_i.shape)
+                        else:
+                            noise = np.random.normal(SMALL_MEDIUM_NOISE[0], SMALL_MEDIUM_NOISE[1], f_i.shape)
                 elif amplitude_condition == "M":
-                    noise = np.random.normal(MEDIUM_NOISE[0],MEDIUM_NOISE[1], f_i.shape)
+                    if noise_type == "gaussian":
+                        if equal_noise:
+                            noise = np.random.normal(EQUAL_NOISE[0], EQUAL_NOISE[1], f_i.shape)
+                        else:
+                            noise = np.random.normal(MEDIUM_NOISE[0],MEDIUM_NOISE[1], f_i.shape)
                 elif amplitude_condition == "M/L":
-                    noise = np.random.normal(MEDIUM_LARGE_NOISE[0], MEDIUM_LARGE_NOISE[1], f_i.shape)
+                    if noise_type == "gaussian":
+                        if equal_noise:
+                            noise = np.random.normal(EQUAL_NOISE[0], EQUAL_NOISE[1], f_i.shape)
+                        else:
+                            noise = np.random.normal(MEDIUM_LARGE_NOISE[0], MEDIUM_LARGE_NOISE[1], f_i.shape)
                 elif amplitude_condition == "L":
-                    noise = np.random.normal(LARGE_NOISE[0], LARGE_NOISE[1], f_i.shape)
+                    if noise_type == "gaussian":
+                        if equal_noise:
+                            noise = np.random.normal(EQUAL_NOISE[0], EQUAL_NOISE[1], f_i.shape)
+                        else:
+                            noise = np.random.normal(LARGE_NOISE[0], LARGE_NOISE[1], f_i.shape)
 
 
                 F_signal.append(f_i)
@@ -316,7 +351,7 @@ def main():
     X = np.round(np.linspace(TIME_RANGE[0],TIME_RANGE[1],TIME_RANGE[1] + 1))
     np.random.seed(42)
 
-    F_signal, F_signal_noise, noises, param_data = generate_ALF_data(X, AMPLITUDE_CONDITIONS, TIME_CONSTANT_CONDITIONS, AMBIGUOUS_CONDITIONS, SAMPLES_PER_CONDITION,SAMPLES_PER_AMBIGUOUS_CONDITION,MU)
+    F_signal, F_signal_noise, noises, param_data = generate_ALF_data(X, AMPLITUDE_CONDITIONS, TIME_CONSTANT_CONDITIONS, AMBIGUOUS_CONDITIONS, SAMPLES_PER_CONDITION,SAMPLES_PER_AMBIGUOUS_CONDITION,MU, noise_type = NOISE_TYPE, equal_noise = USE_EQUAL_NOISE)
     print("Done!")
 
     param_data.to_csv(SAVE_DIR +"/" + SAVE_FILE_NAME + "_parameter" + ".csv",index=False)

@@ -121,12 +121,13 @@ def construct_knn_graph(matrix,sorted_indices,matrix_info,k=10, mutual = False,w
     return A
 
 
-def calculate_normalized_laplacian(A, normalize = True, reg_lambda = 0.1,use_lambda_heuristic = False, saving_lambda_file = "data/quin_rohe_heuristic_lambda",   saving = False, saving_file = "data/L_norm"):
-    """ Calculate the normalized graph Laplacian for given KNN-Graph
+def calculate_laplacian(A, normalize = True,normalization_type = None,reg_lambda = 0.1,use_lambda_heuristic = False, saving_lambda_file = "data/quin_rohe_heuristic_lambda",   saving = False, saving_file = "data/L_norm"):
+    """ Calculate the graph Laplacian for given KNN-Graph
 
     Args:
         A (nd.array): Adjacency Matrix of a knn-Graph
         normalize(bool): Wether to normalize Laplacian
+        normalization_type (str): which approach to use for normalization
         reg_lambda (int): hyperparameter for regularization strength
         use_lambda_heuristic (bool): apply Qin Rohe heuristic for lambda
         saving_lambda_file:  File name for saving
@@ -156,13 +157,21 @@ def calculate_normalized_laplacian(A, normalize = True, reg_lambda = 0.1,use_lam
 
     D = np.sum(A,axis = 1) # get vertices degree
 
+    D_inv = np.reciprocal(D)
+    D_inv[np.where(np.isinf(D_inv))] = 0
     D_inv_sqrt = np.reciprocal(np.sqrt(D))
     D_inv_sqrt[np.where(np.isinf(D_inv_sqrt))] = 0 #division by zero
     D = np.diag(D)
     D_inv_sqrt = np.diag(D_inv_sqrt)
 
     if normalize:
-        L = D_inv_sqrt @ (D-A) @ D_inv_sqrt # calculate normalized laplacian [Ng et al. 2002]
+        if normalization_type == "symmetric":
+            print("Normalization: " +  normalization_type)
+            L = D_inv_sqrt @ (D-A) @ D_inv_sqrt # calculate normalized laplacian [Ng et al. 2002]
+        if normalization_type == "random-walk": #
+            print("Normalization: " +  normalization_type)
+            L = D_inv @ (D-A)
+
     else:
         L = D - A
 
@@ -225,7 +234,7 @@ def cluster_eigenvector_embedding(eigenvec, n_cluster):
     return labels
 
 
-def spectral_clustering(data, metric, metric_info,n_clusters,precomputed_matrix=None, k=5, mutual = False, weighting = False, normalize = True, use_lambda_heuristic = False, reg_lambda = 0.1, saving_lambda_file= "data/quin_rohe_heuristic_lambda",save_laplacian = False, save_eigenvalues_and_vectors = False):
+def spectral_clustering(data, metric, metric_info,n_clusters,precomputed_matrix=None, k=5, mutual = False, weighting = False, normalize = True, normalization_type = "symmetric", use_lambda_heuristic = False, reg_lambda = 0.1, saving_lambda_file= "data/quin_rohe_heuristic_lambda",save_laplacian = False, save_eigenvalues_and_vectors = False):
     """ Cluster data into n_clusters using spectral clustering  based on eigenvectors of knn-graph laplacian
 
     Args:
@@ -234,12 +243,13 @@ def spectral_clustering(data, metric, metric_info,n_clusters,precomputed_matrix=
         n_cluster (list): list of number of n_clusters
         metric_info (string): indicate whether matrix contains similarities or distances
         k (int): number of neighbours to take into account
-        mutual (bool): Wether to construct knn in mutual manner or not. Mutual in sense of: j beeing in k-nearest neighbours of i does not imply that i is in k-nearest neighbours of j. All vertices in a mutual k-NN graph have a degree upper-bounded by k.
+        mutual (bool): Whether to construct knn in mutual manner or not. Mutual in sense of: j beeing in k-nearest neighbours of i does not imply that i is in k-nearest neighbours of j. All vertices in a mutual k-NN graph have a degree upper-bounded by k.
         weighting (bool): weighted edges in KNN - Graph
-        normalize(bool): Wether to normalize Laplacian
+        normalize(bool): Whether to normalize Laplacian
+        normalization_type (str): which approach to use for normalization
         use_lambda_heuristic (bool): apply Qin Rohe heuristic for lambda
         saving_lambda_file:  File name for saving
-        reg_lambda (int): hyperparameter for regularization strength
+        reg_lambda (int): hyper-parameter for regularization strength
 
         save_laplacian (bool): True if you want to save Laplacian
         save_eigenvalues_and_vectors (bool): True if you want to save eigenvectors and eigenvalues
@@ -264,7 +274,7 @@ def spectral_clustering(data, metric, metric_info,n_clusters,precomputed_matrix=
 
     A = construct_knn_graph(dist_matrix,sorted_dist_matrix,metric_info, k=k, mutual = mutual, weighting = weighting)
 
-    L = calculate_normalized_laplacian(A, normalize = normalize, reg_lambda=reg_lambda, use_lambda_heuristic=use_lambda_heuristic, saving_lambda_file=saving_lambda_file, saving = save_laplacian, saving_file = "data/L_norm")
+    L = calculate_laplacian(A, normalize = normalize,normalization_type = normalization_type, reg_lambda=reg_lambda, use_lambda_heuristic=use_lambda_heuristic, saving_lambda_file=saving_lambda_file, saving = save_laplacian, saving_file = "data/L_norm")
 
     eigvec, eigval = calculate_eigenvectors_and_values(L, saving = save_eigenvalues_and_vectors, saving_file= "data/")
 
