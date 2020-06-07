@@ -787,3 +787,105 @@ def plot_parameter_space(parameter_df, color_dict = None, time_condition_labels_
     ax.set_ylabel("Log(tau2)")
     ax.set_zlabel("Amplitude")
 
+
+
+
+""" Example for plotting Clusters
+data_dir = "data/"
+ambig_data = np.load(data_dir + "ambiguous_data_equal_noise=[0,0.2]_F_signal_noise.npy")
+ambig_amplitude_conditions = ["S", "S/M", "M", "M/L", "L"]
+ambig_time_constant_conditions = ["equal_sharp", "equal_medium", "equal_wide", "wide_sharp_negative_skew", "wide_medium_negative_skew","medium_sharp_negative_skew","sharp_wide_positive_skew", "medium_wide_positive_skew" ,"sharp_medium_positive_skew"]
+
+ambiguous_conditions = ["S/M", "M/L", "equal_medium", "wide_medium_negative_skew", "medium_sharp_negative_skew", "medium_wide_positive_skew", "sharp_medium_positive_skew"]
+
+samples_per_condition = 1000
+samples_per_ambiguous_condition = 400
+
+ambig_cluster_dict = get_index_per_class(ambig_amplitude_conditions,
+                                         ambig_time_constant_conditions, 
+                                         ambiguous_conditions, 
+                                         samples_per_condition, 
+                                         samples_per_ambiguous_condition)
+
+ambig_true_labels = get_labels(ambig_data, ambig_cluster_dict)
+
+# Clusters in our dataset
+ambig_clusters_ordered = list(range(0,len(ambig_cluster_dict)+1))
+
+
+# We have 9 clusters for each amplitude and we want them to be plotted in a nice grid format with different
+# not overlapping in rows thats why we allocate 2 rows and 5 columns for each amplitude 
+ambig_layout_label_mapping = labels_to_layout_mapping(ambig_clusters_ordered, 9, (2,5))
+
+k = "Full"
+labels = np.load("labels_ambig_equal_noise=[0,0.2]_SSIM_RAW_k=%s_reg=None_weighting=True.npy" % str(k))
+  
+clustered_labels = {}
+for i, labels_i in enumerate(labels):
+    clustered_labels[i+1] = labels_i
+    
+
+
+For Clear Dataset:
+rows = 3
+columns = 4
+figsize = (20,20)
+clear_layout_label_mapping = 4, (1,4)
+subplot_adjustments = [0.05,0.95,0.03,0.9,0.4, 0.15]
+
+
+
+k_clusters = 14
+
+save_file_clusters = "F1_clusters_k=%s_ambig_equal_noise=[0,0.2]_SSIM_RAW_kclusters=%d.pdf" % (str(k),k_clusters)
+title = r"SSIM-RAW Clusters"+ "\n k=%s" % str(k)
+
+functions_for_plotting.plot_clusters(ambig_data, # the dataset 
+                                     ambig_true_labels, # the true labels for the dataset 
+                                     clustered_labels[k_clusters],  # the clustered labels 
+                                     10, # the number of rows in the grid 
+                                     5, # the number of columns in the grid 
+                                     ambig_layout_label_mapping, # our layout mapping 
+                                     figsize=(40,30), # the figsize
+                                     n_bursts = 100, # the number of bursts you want to plot for each cluster 
+                                     y_lim = (0,16), # the y_lim
+                                     save_file=save_file_clusters, # the file you want to save the plot 
+                                     subplot_adjustments= [0.05,0.93,0.02,0.92,0.9, 0.2], # adjustments for suplots and overall spacing (tricky) 
+                                     plot_mean=False, # plot the mean of each cluster ? 
+                                     title= title) # title of the plot
+
+
+clusters_from_ambig_dataset, counts = np.unique(ambig_true_labels, return_counts = True)
+clear_clusters_from_ambig = clusters_from_ambig_dataset[np.where(counts!= 400)]
+clear_clusters_from_ambig_idx = np.where(np.isin(ambig_true_labels,clear_clusters_from_ambig) == True)[0]
+ambig_clear_inidices = np.asarray(list(range(len(ambig_data))))[clear_clusters_from_ambig_idx]
+#ambig_clear_valid_inidices = ambig_train_fold_indices[1][clear_clusters_from_ambig_idx_validation]
+ambig_clear_labels = {}
+for i, labels_i in enumerate(labels):
+    ambig_clear_labels[i+1] = labels_i[clear_clusters_from_ambig_idx]
+
+ambig_clear_true_labels = ambig_true_labels[clear_clusters_from_ambig_idx]    
+
+
+#k = 50
+#reg = None
+#k_clusters = 14
+
+save_file_clusters = "F1_clusters_k=%s_ambig_equal_noise=[0,0.2]_SSIM_RAW_kclusters=%d_clear_clusters.pdf" % (str(k),k_clusters)
+title = r"SSIM-RAW Clear Clusters" + "\n k=%s" % str(k)
+
+
+functions_for_plotting.plot_clusters(ambig_data[clear_clusters_from_ambig_idx], # the dataset 
+                                     ambig_true_labels[ambig_clear_inidices], # the true labels for the dataset 
+                                     ambig_clear_labels[k_clusters],  # the clustered labels 
+                                     10, # the number of rows in the grid 
+                                     5, # the number of columns in the grid 
+                                     ambig_layout_label_mapping, # our layout mapping 
+                                     figsize=(40,30), # the figsize
+                                     n_bursts = 100, # the number of bursts you want to plot for each cluster 
+                                     y_lim = (0,16), # the y_lim
+                                     save_file=save_file_clusters, # the file you want to save the plot 
+                                     subplot_adjustments= [0.05,0.93,0.02,0.92,0.9, 0.2], # adjustments for suplots and overall spacing (tricky) 
+                                     plot_mean=False, # plot the mean of each cluster ? 
+                                     title= title )# title of the plot    
+"""

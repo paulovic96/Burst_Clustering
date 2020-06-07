@@ -62,26 +62,28 @@ def get_training_set_for_ambiguous_data(data, cluster_dict, ambiguous_conditions
     return training_set, training_set_indices, training_set_conditions
 
 
-def get_training_folds(data, cluster_dict=None, cluster_split="random",training_clusters = None, seed=42, folds = 2):
+def get_training_folds(data, cluster_dict=None, cluster_split="random",only_training_clusters = None, seed=42, folds = 2):
     seed = np.random.seed(seed)
-
     train_fold_indices = []
     valid_fold_indices = []
     if cluster_split == "balanced":
         if not cluster_dict is None:
-            if training_clusters is None:
+            if only_training_clusters is None:
                 for i in range(folds - 1):
                     valid_fold = []
                     train_fold = []
                     for cluster, start_end_point in cluster_dict.items():
-                        cluster_indices = np.arange(start_end_point[0], start_end_point[1] + 1)
+                        if isinstance(start_end_point, tuple):
+                            cluster_indices = np.arange(start_end_point[0], start_end_point[1] + 1)
+                        else:
+                            cluster_indices = start_end_point
                         fold_length =int(len(cluster_indices)/folds)
 
                         valid_fold += [cluster_indices[i * fold_length:(i + 1) * fold_length]]
                         train_fold += [np.delete(cluster_indices, range(i * fold_length, (i + 1) * fold_length), axis=0)]
 
-                    valid_fold = np.concatenate(valid_fold).ravel()
-                    train_fold = np.concatenate(train_fold).ravel()
+                    valid_fold = np.concatenate(valid_fold).ravel().astype(int)
+                    train_fold = np.concatenate(train_fold).ravel().astype(int)
 
                     train_fold_indices += [train_fold]
                     valid_fold_indices += [valid_fold]
@@ -89,14 +91,17 @@ def get_training_folds(data, cluster_dict=None, cluster_split="random",training_
                 valid_fold = []
                 train_fold = []
                 for cluster, start_end_point in cluster_dict.items():
-                    cluster_indices = np.arange(start_end_point[0], start_end_point[1] + 1)
+                    if isinstance(start_end_point, tuple):
+                        cluster_indices = np.arange(start_end_point[0], start_end_point[1] + 1)
+                    else:
+                        cluster_indices = start_end_point
                     fold_length = int(len(cluster_indices) / folds)
 
                     valid_fold += [cluster_indices[(folds - 1) * fold_length:]]
                     train_fold += [np.delete(cluster_indices, range((folds - 1) * fold_length, len(cluster_indices)), axis=0)]
 
-                valid_fold = np.concatenate(valid_fold).ravel()
-                train_fold = np.concatenate(train_fold).ravel()
+                valid_fold = np.concatenate(valid_fold).ravel().astype(int)
+                train_fold = np.concatenate(train_fold).ravel().astype(int)
 
                 train_fold_indices += [train_fold]
                 valid_fold_indices += [valid_fold]
@@ -106,19 +111,56 @@ def get_training_folds(data, cluster_dict=None, cluster_split="random",training_
 
     elif cluster_split == "unbalanced":
         if not cluster_dict is None:
-            if not training_clusters is None:
-                cluster_keys = list(cluster_dict.keys())
-                k_cluster = list(range(len(cluster_keys)))
+            if not only_training_clusters is None:
+                for i in range(folds - 1):
+                    valid_fold = []
+                    train_fold = []
+                    for k, item in enumerate(cluster_dict.items()):
+                        cluster = item[0]
+                        start_end_point = item[1]
+                        if isinstance(start_end_point, tuple):
+                            cluster_indices = np.arange(start_end_point[0], start_end_point[1] + 1)
+                        else:
+                            cluster_indices = start_end_point
+                        fold_length =int(len(cluster_indices)/folds)
 
-                valid_clusters = k_cluster
-                for x in training_clusters:
-                    valid_clusters.remove(x)
-                for i, cluster_key in enumerate(list(cluster_keys)):
-                    cluster_indices = np.arange(cluster_dict[cluster_key][0], cluster_dict[cluster_key][1] + 1)
-                    if i in valid_clusters:
-                        valid_fold_indices += list(cluster_indices)
-                    elif i in training_clusters:
-                        train_fold_indices += list(cluster_indices)
+                        if k in only_training_clusters:
+                            valid_fold += [[]]
+                            train_fold += [cluster_indices]
+                        else:
+                            valid_fold += [cluster_indices[i * fold_length:(i + 1) * fold_length]]
+                            train_fold += [np.delete(cluster_indices, range(i * fold_length, (i + 1) * fold_length), axis=0)]
+
+                    valid_fold = np.concatenate(valid_fold).ravel().astype(int)
+                    train_fold = np.concatenate(train_fold).ravel().astype(int)
+
+                    train_fold_indices += [train_fold]
+                    valid_fold_indices += [valid_fold]
+
+                valid_fold = []
+                train_fold = []
+                for k, item in enumerate(cluster_dict.items()):
+                    cluster = item[0]
+                    start_end_point = item[1]
+
+                    if isinstance(start_end_point, tuple):
+                        cluster_indices = np.arange(start_end_point[0], start_end_point[1] + 1)
+                    else:
+                        cluster_indices = start_end_point
+                    fold_length = int(len(cluster_indices) / folds)
+
+                    if k in only_training_clusters:
+                        valid_fold += [[]]
+                        train_fold += [cluster_indices]
+                    else:
+                        valid_fold += [cluster_indices[(folds - 1) * fold_length:]]
+                        train_fold += [np.delete(cluster_indices, range((folds - 1) * fold_length, len(cluster_indices)), axis=0)]
+
+                valid_fold = np.concatenate(valid_fold).ravel().astype(int)
+                train_fold = np.concatenate(train_fold).ravel().astype(int)
+
+                train_fold_indices += [train_fold]
+                valid_fold_indices += [valid_fold]
             else:
                 print("Please provide a valid list of clusters for your training set!")
         else:

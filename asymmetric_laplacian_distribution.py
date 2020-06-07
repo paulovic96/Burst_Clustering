@@ -284,10 +284,10 @@ def get_index_per_class(amplitude_conditions,time_constant_conditions, ambiguous
         for time_constant_condition in time_constant_conditions:
             condition = amplitude_condition + "-" + time_constant_condition
             if amplitude_condition in ambiguous_conditions or time_constant_condition in ambiguous_conditions:
-                class_dict[condition] = [current_index, current_index + samples_for_ambiguous-1]
+                class_dict[condition] = (current_index, current_index + samples_for_ambiguous-1)
                 current_index += samples_for_ambiguous
             else:
-                class_dict[condition] = [current_index, current_index + samples_per_condition-1]
+                class_dict[condition] = (current_index, current_index + samples_per_condition-1)
                 current_index += samples_per_condition
     return class_dict
 
