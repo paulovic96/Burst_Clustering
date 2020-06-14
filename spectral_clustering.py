@@ -163,6 +163,7 @@ def calculate_laplacian(A, normalize = True,normalization_type = None,reg_lambda
     D_inv_sqrt[np.where(np.isinf(D_inv_sqrt))] = 0 #division by zero
     D = np.diag(D)
     D_inv_sqrt = np.diag(D_inv_sqrt)
+    D_inv = np.diag(D_inv)
 
     if normalize:
         if normalization_type == "symmetric":
