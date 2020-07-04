@@ -613,7 +613,70 @@ def get_tiny_burst_indices_for_merged_data(culture_counts, tiny_bursts_indices):
     return tiny_bursts_in_data_indices
 
 
+def plot_data_burst_distribution(culture_counts, tiny_burst_counts):
+    plt.close("all")
+    # The position of the bars on the x-axis
+    r = range(len(culture_counts.keys()))
 
+    # Names of group and bar width
+    keys = np.sort(list(culture_counts.keys()))
+
+    names = ["sparse_" + ".".join(x.split('_')[-3:]) if x.find("Sparse") >= 0 else ".".join(x.split('_')[-3:]) for x in
+             keys]
+    bar_tiny = [tiny_burst_counts[key] for key in np.sort(list(tiny_burst_counts.keys()))]
+    bar_no_tiny = [culture_counts[key.replace("_tiny_index", "")] - tiny_burst_counts[key] for key in
+                   np.sort(list(tiny_burst_counts.keys()))]
+    # bar = [culture_counts[key] for key in np.sort(list(culture_counts.keys()))]
+    barWidth = 1
+
+    fig, ax = plt.subplots(figsize=(20, 10))
+
+    ax.bar(r, bar_no_tiny, edgecolor='white', width=barWidth, label="Bursts")
+    ax.bar(r, bar_tiny, bottom=bar_no_tiny, edgecolor='white', width=barWidth, label="tiny Bursts",
+           color="lightskyblue")
+
+    # ax.bar(r, bar, edgecolor = 'white', width = barWidth, color = "dodgerblue")
+
+    for i, p in enumerate(ax.patches):
+        if len(str(p.get_height())) > 4:
+            shift = 0
+        elif len(str(p.get_height())) == 4:
+            shift = 0.1
+        elif len(str(p.get_height())) == 3:
+            shift = 0.2
+        elif len(str(p.get_height())) == 2:
+            shift = 0.3
+        else:
+            shift = 0.4
+
+        ax.annotate(str(p.get_height()), (p.get_x() + shift, p.get_y() + p.get_height() * 0.4), fontsize=10)
+        if i >= int(len(ax.patches) / 2):
+            if len(str(culture_counts[keys[i - len(keys)]])) > 4:
+                shift = 0
+            elif len(str(culture_counts[keys[i - len(keys)]])) == 4:
+                shift = 0.1
+            elif len(str(culture_counts[keys[i - len(keys)]])) == 3:
+                shift = 0.2
+            elif len(str(culture_counts[keys[i - len(keys)]])) == 2:
+                shift = 0.3
+            else:
+                shift = 0.4
+            ax.annotate(str(culture_counts[keys[i - len(keys)]]), (p.get_x() + shift, p.get_y() + p.get_height() + 100),
+                        fontsize=10, fontweight='bold')
+
+    # Custom X axis
+    ax.set_xticks(r)
+    ax.set_xticklabels(names, fontsize=9, rotation='vertical', fontweight='bold')
+    ax.set_xlabel("Culture", fontsize=20, labelpad=10)
+    ax.set_ylabel("#Bursts", fontsize=20, labelpad=10)
+    ax.set_yticks(range(0, 4000, 500))
+    ax.set_yticklabels(range(0, 4000, 500), fontsize=15)
+    ax.set_title("Number of detected Bursts per Culture", fontsize=30, pad=20)
+    # Show graphic
+    ax.legend(fontsize=15)
+    # ax.set_title("Burst per culture", fontsize = 40)
+
+"""
 data_dir = "data/raw_data/daily_spontanous_dense/day20/"
 spike_files = [x for x in os.listdir(data_dir) if x.endswith(".spike")]
 data_burst_batches = [x for x in os.listdir(data_dir) if x.find("burst_data_batch_") >= 0 and x.find("tiny") <0]
@@ -628,49 +691,34 @@ data, culture_counts = merge_data_batches_ordered(data_burst_batches, day_wise =
 tiny_burst_counts, tiny_bursts_indices = load_tiny_indices_per_culture(data_dir, data_batch_names_for_tiny_indices, day_wise = False)
 tiny_bursts_in_data_indices = get_tiny_burst_indices_for_merged_data(culture_counts, tiny_bursts_indices)
 
-# The position of the bars on the x-axis
-r = range(len(culture_counts.keys()))
 
-# Names of group and bar width
-keys = np.sort(list(culture_counts.keys()))
+padded_data, data_center = burst_batch_padding(data, padding = "peak")
 
-names = ["sparse_" + ".".join(x.split('_')[-3:]) if x.find("Sparse") >= 0 else ".".join(x.split('_')[-3:]) for x in
-         keys]
-bar_tiny = [tiny_burst_counts[key] for key in np.sort(list(tiny_burst_counts.keys()))]
-bar_no_tiny = [culture_counts[key.replace("_tiny_index", "")] - tiny_burst_counts[key] for key in
-               np.sort(list(tiny_burst_counts.keys()))]
-# bar = [culture_counts[key] for key in np.sort(list(culture_counts.keys()))]
-barWidth = 1
+data_burst_by_time = np.mean(padded_data,axis = 1).T
+#data_burst_by_time_shuffled = (np.random.permutation(data_burst_by_time.T)).T
+print("Burst data Batch: ", padded_data.shape)
+print("Averaged over channels: ", data_burst_by_time.shape)
+print("Centered at: ", data_center)
 
-fig, ax = plt.subplots(figsize=(50, 30))
+#np.save(data_dir + 'padded_data_day_20.npy', padded_data)
+#np.save(data_dir + 'data_burst_by_time_day_20.npy', data_burst_by_time)
 
-ax.bar(r, bar_no_tiny, edgecolor='white', width=barWidth, label="Bursts")
-ax.bar(r, bar_tiny, bottom=bar_no_tiny, edgecolor='white', width=barWidth, label="tiny Bursts", color="lightskyblue")
-
-# ax.bar(r, bar, edgecolor = 'white', width = barWidth, color = "dodgerblue")
+tiny_bursts = data_burst_by_time.T[tiny_bursts_in_data_indices]
+no_tiny_bursts = np.delete(data_burst_by_time.T,tiny_bursts_in_data_indices,axis = 0)
 
 
-for i, p in enumerate(ax.patches):
-    ax.annotate(str(p.get_height()), (p.get_x() + 0.2, p.get_y() + p.get_height() * 0.4), fontsize=20)
-    if i >= int(len(ax.patches) / 2):
-        ax.annotate(str(culture_counts[keys[i - len(keys)]]), (p.get_x(), p.get_y() + p.get_height() + 100),
-                    fontsize=30, fontweight='bold')
+np.random.seed(2)
+np.random.shuffle(tiny_bursts)
+np.random.shuffle(no_tiny_bursts)
 
-    # if len(annotation) < 3:
-    #    ax.annotate(annotation, (p.get_x()+0.3, p.get_y() + p.get_height() + 100), fontsize = 25,fontweight='bold')
-    # elif len(annotation) == 3:
-    #    ax.annotate(annotation, (p.get_x()+0.3, p.get_y() + p.get_height() + 100), fontsize = 25,fontweight='bold')
-    # else:
-    #    ax.annotate(annotation, (p.get_x()+0.2, p.get_y() + p.get_height() + 100), fontsize = 25,fontweight='bold')
-
-# Custom X axis
-ax.set_xticks(r)
-ax.set_xticklabels(names, fontsize=30, rotation='vertical', fontweight='bold')
-ax.set_xlabel("Culture", fontsize=50, labelpad=25)
-ax.set_ylabel("#Bursts", fontsize=50, labelpad=25)
-ax.set_yticks(range(0, 4000, 500))
-ax.set_yticklabels(range(0, 4000, 500), fontsize=30)
-ax.set_title("Number of detected Bursts per Culture", fontsize=70, pad=30)
-# Show graphic
-ax.legend(fontsize=25)
-# ax.set_title("Burst per culture", fontsize = 40)
+plt.figure(figsize=(20, 10))
+for burst in no_tiny_bursts[0:200]:
+    plt.plot(burst)
+plt.xlabel("Time (10ms bins)", fontsize=15, labelpad=10)
+plt.xticks(fontsize=12)
+plt.yticks(fontsize=15)
+plt.ylabel("Spike Count", fontsize=15, labelpad=10)
+plt.title("Burst Examples averaged over Channels", fontsize=20, pad=20)
+# plt.xlim((7500,11000))
+plt.show()
+"""
