@@ -676,6 +676,14 @@ def plot_data_burst_distribution(culture_counts, tiny_burst_counts):
     ax.legend(fontsize=15)
     # ax.set_title("Burst per culture", fontsize = 40)
 
+
+def get_culture_dict(culture_count_dict):
+    culture_boarders = np.sort(np.append(np.cumsum(list(culture_count_dict.values())),0))
+    culture_dict = {}
+    for i,key in enumerate(culture_count_dict.keys()):
+        culture_dict[key] = (culture_boarders[i], culture_boarders[i+1]-1)
+    return culture_dict
+
 """
 data_dir = "data/raw_data/daily_spontanous_dense/day20/"
 spike_files = [x for x in os.listdir(data_dir) if x.endswith(".spike")]

@@ -77,6 +77,7 @@ def get_training_folds(data, cluster_dict=None, cluster_split="random",only_trai
                             cluster_indices = np.arange(start_end_point[0], start_end_point[1] + 1)
                         else:
                             cluster_indices = start_end_point
+                        np.random.shuffle(cluster_indices)
                         fold_length =int(len(cluster_indices)/folds)
 
                         valid_fold += [cluster_indices[i * fold_length:(i + 1) * fold_length]]
@@ -95,6 +96,7 @@ def get_training_folds(data, cluster_dict=None, cluster_split="random",only_trai
                         cluster_indices = np.arange(start_end_point[0], start_end_point[1] + 1)
                     else:
                         cluster_indices = start_end_point
+                    np.random.shuffle(cluster_indices)
                     fold_length = int(len(cluster_indices) / folds)
 
                     valid_fold += [cluster_indices[(folds - 1) * fold_length:]]
