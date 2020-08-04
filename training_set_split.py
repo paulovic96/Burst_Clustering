@@ -126,7 +126,7 @@ def get_training_folds(data, cluster_dict=None, cluster_split="random",only_trai
                             cluster_indices = start_end_point
                         fold_length =int(len(cluster_indices)/folds)
 
-                        if k in only_training_clusters:
+                        if k in only_training_clusters[i]:
                             valid_fold += [[]]
                             train_fold += [cluster_indices]
                         else:
@@ -151,7 +151,7 @@ def get_training_folds(data, cluster_dict=None, cluster_split="random",only_trai
                         cluster_indices = start_end_point
                     fold_length = int(len(cluster_indices) / folds)
 
-                    if k in only_training_clusters:
+                    if k in only_training_clusters[folds-1]:
                         valid_fold += [[]]
                         train_fold += [cluster_indices]
                     else:

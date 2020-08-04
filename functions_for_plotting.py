@@ -143,13 +143,16 @@ def get_new_layout(k_clusters, rows, columns, splitted_classes, split_count):
 
 
 
-def plot_clusters(data, reference_labels,labels_k,rows,columns, layout_label_mapping, figsize = (30,20), reference_clustering="True", percent_true_cluster = False, n_bursts=None, y_lim = None, plot_mean = False, title = None, subplot_adjustments = [0.05,0.95,0.03,0.9,0.4, 0.15], save_file = "test.pdf"):
+def plot_clusters(data, reference_labels,labels_k,rows,columns, layout_label_mapping, figsize = (30,20), reference_clustering="True", percent_true_cluster = False, scores=None, n_bursts=None, y_lim = None, plot_mean = False, title = None, subplot_adjustments = [0.05,0.95,0.03,0.9,0.4, 0.15], save_file = "test.pdf"):
 
     corresponding_true_class_for_prediction, highest_overlap_class_for_prediction = get_true_label_mapping(reference_labels, labels_k)
     splitted_classes, split_count, new_clusters_splitted = get_splitted_clusters(highest_overlap_class_for_prediction)
     merged_classes, new_clusters_merged = get_merged_clusters(corresponding_true_class_for_prediction)
     position_count_for_splitted_classes = np.zeros(len(split_count))
     empty_true_clusters = list(np.unique(reference_labels))
+
+    if reference_labels is None:
+        reference_labels = labels_k
 
     normal_layout = np.arange(rows*columns).reshape((rows,columns))
 
@@ -202,9 +205,15 @@ def plot_clusters(data, reference_labels,labels_k,rows,columns, layout_label_map
                                     "\n" +reference_clustering+" Cluster: " + "\n".join(textwrap.wrap(', '.join(['[' + ', '.join(['%d'] * len(x)) +']' for x in true_clusters]), 25)) +
                                     "\n%%: " + "\n".join(textwrap.wrap(', '.join(['[' + ', '.join(['%.1f'] * len(x)) +']' for x in true_cluster_percents]), 25))) % tuple(new_clusters_splitted[corresponding_true_label] + sum(true_clusters,[]) + sum(true_cluster_percents,[]))
                 else:
-                    cluster_title = ("Cluster [" + ', '.join(['%d'] * len(new_clusters_splitted[corresponding_true_label])) + "]" +
-                                    "\n" + reference_clustering+" Cluster: " + "\n".join(textwrap.wrap(', '.join(['[' + ', '.join(['%d'] * len(x)) +']' for x in true_clusters]), 25)) +
-                                    "\n#:  " + "\n".join(textwrap.wrap(', '.join(['[' + ', '.join(['%d'] * len(x)) +']' for x in true_cluster_counts]), 25))) % tuple(new_clusters_splitted[corresponding_true_label] + sum(true_clusters,[]) + sum(true_cluster_counts,[]))
+                    if "Score" in reference_clustering:
+                        cluster_title = ("Cluster [" + ', '.join(['%d'] * len(new_clusters_splitted[corresponding_true_label])) + "]" +
+                                         "\n" + reference_clustering + ": " + "[" + ', '.join(['%.2f'] * len(new_clusters_splitted[corresponding_true_label])) + "]" +
+                                        "\n#:  " + "\n".join(textwrap.wrap(', '.join(['[' + ', '.join(['%d'] * len(x)) +']' for x in true_cluster_counts]), 25))) % tuple(
+                            new_clusters_splitted[corresponding_true_label] + [scores[k] for k in new_clusters_splitted[corresponding_true_label]] + sum(true_cluster_counts,[]))
+                    else:
+                        cluster_title = ("Cluster [" + ', '.join(['%d'] * len(new_clusters_splitted[corresponding_true_label])) + "]" +
+                                        "\n" + reference_clustering+" Cluster: " + "\n".join(textwrap.wrap(', '.join(['[' + ', '.join(['%d'] * len(x)) +']' for x in true_clusters]), 25)) +
+                                        "\n#:  " + "\n".join(textwrap.wrap(', '.join(['[' + ', '.join(['%d'] * len(x)) +']' for x in true_cluster_counts]), 25))) % tuple(new_clusters_splitted[corresponding_true_label] + sum(true_clusters,[]) + sum(true_cluster_counts,[]))
 
             row_end = int(row_start + 1)
 
@@ -289,9 +298,14 @@ def plot_clusters(data, reference_labels,labels_k,rows,columns, layout_label_map
                                      "\n%%: [" + "\n".join(textwrap.wrap(', '.join(['%.1f'] * len(true_cluster_percents)) + "]", 25))) % tuple([i] + list(true_clusters) + list(np.round(np.asarray(true_cluster_percents) * 100, decimals=1)))  # sum(list(map(list,zip(true_clusters,true_cluster_counts))),[]))
                                      #"\n%%: [" + ', '.join(['%d/%d'] * len(true_cluster_counts)) + "]") % tuple([i] + list(true_clusters) + sum(list(map(list, zip(true_cluster_counts, true_class_size))),[]))
                 else:
-                    cluster_title = ("Cluster %i "
-                                     "\n"+reference_clustering+" Cluster: [" + "\n".join(textwrap.wrap(', '.join(['%d'] * len(true_clusters)) + "]", 25)) +
-                                     "\n#: [" + "\n".join(textwrap.wrap(', '.join(['%d'] * len(true_cluster_counts)) + "]", 25))) % tuple([i] + list(true_clusters) + list(true_cluster_counts))  # sum(list(map(list,zip(true_clusters,true_cluster_counts))),[]))
+                    if "Score" in reference_clustering:
+                        cluster_title = ("Cluster %i "
+                                         "\n" + reference_clustering + ": " + "[%.2f]"+
+                                         "\n#: [" + "\n".join(textwrap.wrap(', '.join(['%d'] * len(true_cluster_counts)) + "]", 25))) % tuple([i] + [scores[i]] + list(true_cluster_counts))
+                    else:
+                        cluster_title = ("Cluster %i "
+                                         "\n"+reference_clustering+" Cluster: [" + "\n".join(textwrap.wrap(', '.join(['%d'] * len(true_clusters)) + "]", 25)) +
+                                         "\n#: [" + "\n".join(textwrap.wrap(', '.join(['%d'] * len(true_cluster_counts)) + "]", 25))) % tuple([i] + list(true_clusters) + list(true_cluster_counts))  # sum(list(map(list,zip(true_clusters,true_cluster_counts))),[]))
             else:
                 if percent_true_cluster:
                     cluster_title = ("Cluster %i "
@@ -300,10 +314,15 @@ def plot_clusters(data, reference_labels,labels_k,rows,columns, layout_label_map
                         #"%%: [" + ', '.join(['%d/%d'] * len(true_cluster_counts)) + "]") % tuple([i] + list(true_clusters) + sum(list(map(list, zip(true_cluster_counts, true_class_size))), []))
 
                 else:
-                    cluster_title = ("Cluster %i \n"+reference_clustering+" Cluster: [" + ', '.join(
-                        ['%d'] * len(true_clusters)) + "]" + " #: [" + ', '.join(
-                        ['%d'] * len(true_cluster_counts)) + "]") % tuple([i] + list(true_clusters) + list(
-                        true_cluster_counts))  # sum(list(map(list,zip(true_clusters,true_cluster_counts))),[]))
+                    if "Score" in reference_clustering:
+                        cluster_title = ("Cluster %i \n" + reference_clustering + ": " + "[%.2f]" +
+                                         " #: [" + ', '.join(['%d'] * len(true_cluster_counts)) + "]"
+                                         ) % tuple([i] + [scores[i]] + list(true_cluster_counts))
+                    else:
+                        cluster_title = ("Cluster %i \n"+reference_clustering+" Cluster: [" + ', '.join(
+                            ['%d'] * len(true_clusters)) + "]" + " #: [" + ', '.join(
+                            ['%d'] * len(true_cluster_counts)) + "]") % tuple([i] + list(true_clusters) + list(
+                            true_cluster_counts))  # sum(list(map(list,zip(true_clusters,true_cluster_counts))),[]))
 
 
             ax.set_title(cluster_title, loc="left", fontsize = 12)
@@ -789,6 +808,129 @@ def plot_parameter_space(parameter_df, color_dict = None, time_condition_labels_
     ax.set_zlabel("Amplitude")
 
 
+def grouped_heatmap_plot(shape,
+                         within_distances_mms_dict,
+                         between_distances_mms_dict,
+                         max_value,
+                         row_conditions,
+                         col_conditions,
+                         row_conditions_occurance_in_data_interval,
+                         col_conditions_occurance_in_data_interval,
+                         condition = "mean",
+                         normalized = True,
+                         clusters_row=None,
+                         clusters_col=None,
+                         title="",
+                         figsize=(20, 20),
+                         subplotadjustments=None):
+    if clusters_row is None:
+        clusters_row = list(range(len(within_distances_mms_dict.keys())))
+    if clusters_col is None:
+        clusters_col = list(range(len(within_distances_mms_dict.keys())))
+
+    mean_distance_matrix = np.zeros((shape[0], shape[1]))
+
+    # cluster_positions = list(range(n_clusters))
+
+    if condition == "mean":
+        condition_index = 0
+    elif condition == "median":
+        condition_index = 1
+    elif condition == "std":
+        condition_index = 2
+    else:
+        print("please provide a valid condition: ['mean', 'median', 'std'] !!!")
+        return
+
+    for c, cluster in enumerate(clusters_row):
+        for i, j in enumerate(clusters_col):
+            if cluster == j:
+                mean_distance_matrix[c, i] = within_distances_mms_dict[cluster][condition_index]
+            else:
+                mean_distance_matrix[c, i] = between_distances_mms_dict[cluster][j][condition_index]
+
+        # other_clusters = clusters.copy()
+        # other_cluster_positions = cluster_positions.copy()
+        # other_clusters.remove(cluster)
+        # other_cluster_positions.remove(c)
+        # for i,j in enumerate(other_clusters):
+        # mean_distance_matrix[c,other_cluster_positions[i]] = between_distances_mms_dict[cluster][j][1]
+
+    if normalized:
+        mean_distance_matrix = mean_distance_matrix / np.round(max_value)
+        vmax = 1
+    else:
+        vmax = np.round(max_value)
+
+    rows = len(row_conditions)
+    cols = len(col_conditions)
+
+    fig, ax = plt.subplots(ncols=cols, nrows=rows, figsize=figsize)
+
+    cmap = plt.cm.magma
+    heatmapkws = dict(square=False, cbar=False, cmap=cmap, vmin=0, vmax=vmax, annot_kws={"fontsize": 15})
+
+    row_labels = row_conditions  # ["Small Amplitude", "Medium Amplitude", "Large Amplitude"]
+    col_labels = col_conditions  # ["Small Amplitude", "Medium Amplitude", "Large Amplitude"]
+
+    cluster_in_rows = sum([list(range(i, shape[0], row_conditions_occurance_in_data_interval)) for i in
+                           range(row_conditions_occurance_in_data_interval)], [])
+    # print(cluster_in_rows)
+
+    for row in range(rows):
+        cluster_in_columns = sum([list(range(i, shape[1], col_conditions_occurance_in_data_interval)) for i in
+                                  range(col_conditions_occurance_in_data_interval)], [])
+        # print(cluster_in_columns)
+
+        data_rows = cluster_in_rows[:int(shape[0] / rows)]
+        for i in data_rows:
+            cluster_in_rows.remove(i)
+
+        for col in range(cols):
+            data_cols = cluster_in_columns[:int(shape[1] / cols)]
+            for i in data_cols:
+                cluster_in_columns.remove(i)
+
+            yticklabels = col == 0
+            xticklabels = (row == 0 or row == len(row_conditions) - 1)
+
+            sns.heatmap(mean_distance_matrix[np.ix_(data_rows, data_cols)], ax=ax[row, col], annot=True, fmt=".2f",
+                        **heatmapkws, yticklabels=yticklabels, xticklabels=xticklabels)
+
+            if col == 0:
+                ax[row, col].set_yticklabels(np.asarray(clusters_row)[data_rows])
+                ax[row, col].set_ylabel(row_labels[row], fontsize=24, labelpad=20)
+                ax[row, col].tick_params(axis='y', labelsize=18)
+
+            if row == 0 or row == len(row_conditions) - 1:
+                ax[row, col].set_xticklabels(np.asarray(clusters_col)[data_cols])
+                ax[row, col].set_xlabel(col_labels[col], fontsize=24, labelpad=20)
+                if row == 0:
+                    ax[row, col].xaxis.tick_top()
+                    ax[row, col].xaxis.set_label_position('top')
+
+                ax[row, col].tick_params(axis="x", labelsize=18)
+
+    norm = matplotlib.colors.Normalize(vmin=0, vmax=vmax)
+    cax = fig.add_axes([0.93, 0.1, 0.03, 0.8])
+
+    sm = matplotlib.cm.ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([])
+    fig.colorbar(sm, cax=cax)
+    cax.tick_params(labelsize=24)
+    if not subplotadjustments is None:
+        left = subplotadjustments[0]
+        right = subplotadjustments[1]
+        bottom = subplotadjustments[2]
+        top = subplotadjustments[3]
+        wspace = subplotadjustments[4]
+        hspace = subplotadjustments[5]
+
+        plt.subplots_adjust(left=left, right=right, bottom=bottom, top=top, wspace=wspace, hspace=hspace)
+    else:
+        plt.subplots_adjust(wspace=0.05, hspace=0.05)
+
+    fig.suptitle(title, fontsize=28)
 
 
 """ Example for plotting Clusters
@@ -894,29 +1036,97 @@ functions_for_plotting.plot_clusters(ambig_data[clear_clusters_from_ambig_idx], 
 
 """
 Wagenaar Example:
-data = day20_data
-culture_dict = get_culture_dict(culture_count_dict)
+data_dir = "data/raw_data/daily_spontanous_dense/day20/"
+data = np.load(data_dir + "data_burst_by_time_day_20.npy").T
 
-labels = np.load("labels_day20_Euclidean_k=10_reg=1_100clusters.npy",allow_pickle=True)
+data_burst_batches_files = [x for x in os.listdir(data_dir) if x.find("burst_data_batch_") >= 0 and x.find("tiny") <0]
+tiny_burst_indices_files = [x for x in os.listdir(data_dir) if x.find("burst_data_batch_tiny_index") >= 0]
+data_batch_names = [x.split('.')[0] for x in data_burst_batches_files]
+data_batch_names_for_tiny_indices = [x.split('.')[0] for x in tiny_burst_indices_files]
+
+data_burst_batches = wagenaar_dataset.load_batch_files_with_number_bursts(data_dir, data_batch_names)
+_, culture_count_dict = wagenaar_dataset.merge_data_batches_ordered(data_burst_batches, day_wise = False) # get number of bursts per culture
+
+tiny_burst_count_dict, tiny_bursts_indices_dict = wagenaar_dataset.load_tiny_indices_per_culture(data_dir, data_batch_names_for_tiny_indices, day_wise = False) # get number of tiny bursts per culture and indices within culture
+tiny_bursts_in_data_indices = wagenaar_dataset.get_tiny_burst_indices_for_merged_data(culture_count_dict, tiny_bursts_indices_dict) # get indices with respect to the whole dataset
+
+culture_dict = wagenaar_dataset.get_culture_dict(culture_count_dict)
+
+labels = np.load("labels_day20_Euclidean_k=10_reg=None_100clusters.npy",allow_pickle=True)
 clustered_labels = {}
 for i, labels_i in enumerate(labels):
     clustered_labels[i+1] = labels_i
+    
 
 save_file_clusters = "test.pdf"
-k_clusters = 13
+k_clusters = 11
+reference_clusters = 11
 title = "Clusters Day 20 \n reg=1"
 
 functions_for_plotting.plot_clusters(data, # the dataset 
-                                     clustered_labels[k_clusters], # the true labels for the dataset 
+                                     clustered_labels[reference_clusters], # the reference labels for the dataset 
                                      clustered_labels[k_clusters],  # the clustered labels 
                                      4, # the number of rows in the grid 
                                      4, # the number of columns in the grid 
                                      None, # our layout mapping 
                                      figsize=(20,20), # the figsize
+                                     #reference_clustering="k-clusters=14", 
                                      n_bursts = 100, # the number of bursts you want to plot for each cluster 
                                      y_lim = (0,16), # the y_lim for zoomed plot (0,1)
                                      save_file=save_file_clusters, # the file you want to save the plot 
                                      subplot_adjustments= [0.05,0.95,0.03,0.9,0.4, 0.15], # adjustments for suplots and overall spacing (tricky) 
                                      plot_mean=False, # plot the mean of each cluster ? 
                                      title= title )# title of the plot 
+                                     
+# Displaying F1-Score:
+
+condition = "5_fold_random"
+reg = "None"
+folds = 5
+
+train_fold_indices, valid_fold_indices = get_training_folds(data_no_tiny,culture_dict_no_tiny, cluster_split = "random",folds = 5)
+
+labels_valid = np.load("labels_day20_Euclidean_k=10_reg=%s_%s_valid_100clusters.npy" % (reg,condition),allow_pickle=True)
+labels_train = np.load("labels_day20_Euclidean_k=10_reg=%s_%s_train_100clusters.npy" % (reg,condition),allow_pickle=True)
+clustered_labels_valid = {}
+clustered_labels_train = {}
+for i in range(len(labels_valid[0])):
+    clustered_labels_valid[i+1] = labels_valid[:,i]
+    clustered_labels_train[i+1] = labels_train[:,i]
+
+F1_scores = {}
+for i in range(1,101):
+    F1_scores[i] = []
+
+for f in range(1,folds+1):
+    F1_score = np.load("F1_day20_Euclidean_k=10_reg=%s_%s_%d_100clusters_clusterwise.npy" % (reg,condition,f),allow_pickle=True).item()
+    for k in range(1,101):
+        F1_scores[k].append(F1_score[k])
+        
+save_file_clusters = "test.pdf"
+k_clusters = 14
+reference_clusters = 14
+title = "Clusters Day 20 (no-tiny, Validation 1) \n reg=%s" % reg
+
+     
+                                     
+functions_for_plotting.plot_clusters(data[train_fold_indices[0]], # the dataset 
+                                     clustered_labels_train[reference_clusters][0], # the reference labels for the dataset 
+                                     clustered_labels_train[k_clusters][0],  # the clustered labels 
+                                     4, # the number of rows in the grid 
+                                     4, # the number of columns in the grid 
+                                     None, # our layout mapping 
+                                     figsize=(20,20), # the figsize
+                                     reference_clustering="True",
+                                     scores = None,
+                                     n_bursts = 100, # the number of bursts you want to plot for each cluster 
+                                     y_lim = (0,16), # the y_lim for zoomed plot (0,1) normal (0,16)
+                                     save_file=save_file_clusters, # the file you want to save the plot 
+                                     subplot_adjustments= [0.05,0.95,0.03,0.9,0.4, 0.15], # adjustments for suplots and overall spacing (tricky) 
+                                     plot_mean=False, # plot the mean of each cluster ? 
+                                     title= title )# title of the plot                                      
+                                                                 
+                                     
 """
+
+

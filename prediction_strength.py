@@ -413,7 +413,7 @@ def get_J_statistic(recall, specificity):
     j = recall + specificity -1
     return j
 
-def get_F1_score_per_k(data, train_indices, valid_indices, train_labels, valid_labels, combination_type="full",
+def get_F1_score_per_k(data, train_indices, valid_indices, train_labels, valid_labels, combination_type="training (equal)",
                        true_train_labels=None, own_combinations=None, clusterwise=False):
     k_clusters = list(valid_labels.keys())
     training_set = data[train_indices]
@@ -592,7 +592,7 @@ def get_F1_score_per_k(data, train_indices, valid_indices, train_labels, valid_l
         return F1_score_per_k_combination
 
 
-def get_statistic_score_per_k(data, train_indices, valid_indices, train_labels, valid_labels, combination_type="full",
+def get_statistic_score_per_k(data, train_indices, valid_indices, train_labels, valid_labels, combination_type="training (equal)",
                        true_train_labels=None, own_combinations=None, clusterwise=False, statistic = "F1"):
     k_clusters = list(valid_labels.keys())
     training_set = data[train_indices]
@@ -620,7 +620,6 @@ def get_statistic_score_per_k(data, train_indices, valid_indices, train_labels, 
                                                                                                         true_labels_k,
                                                                                                         unique_valid_labels,
                                                                                                         unique_true_labels,
-
                                                                                                         clusterwise)
                 precision = get_precision(true_positives, false_positives)
                 recall = get_recall(true_positives, false_negatives)
@@ -630,6 +629,14 @@ def get_statistic_score_per_k(data, train_indices, valid_indices, train_labels, 
                     score = get_F1_score(recall, precision)
                 elif statistic == "Youden's J":
                     score = get_J_statistic(recall, specificity)
+                elif statistic == "Precision":
+                    score = precision
+                elif statistic == "Recall":
+                    score = recall
+                elif statistic == "Specificity":
+                    score = specificity
+                elif statistic == "Confusion Matrix":
+                    score = (true_positives, false_positives, true_negatives, false_negatives)
                 else:
                     print("ERROR! Unknown statistic: %s" % statistic)
 
@@ -672,6 +679,14 @@ def get_statistic_score_per_k(data, train_indices, valid_indices, train_labels, 
                     score = get_F1_score(recall, precision)
                 elif statistic == "Youden's J":
                     score = get_J_statistic(recall, specificity)
+                elif statistic == "Precision":
+                    score = precision
+                elif statistic == "Recall":
+                    score = recall
+                elif statistic == "Specificity":
+                    score = specificity
+                elif statistic == "Confusion Matrix":
+                    score = (true_positives, false_positives, true_negatives, false_negatives)
                 else:
                     print("ERROR! Unknown statistic: %s" % statistic)
 
@@ -714,6 +729,14 @@ def get_statistic_score_per_k(data, train_indices, valid_indices, train_labels, 
                 score = get_F1_score(recall, precision)
             elif statistic == "Youden's J":
                 score = get_J_statistic(recall, specificity)
+            elif statistic == "Precision":
+                score = precision
+            elif statistic == "Recall":
+                score = recall
+            elif statistic == "Specificity":
+                score = specificity
+            elif statistic == "Confusion Matrix":
+                score = (true_positives, false_positives, true_negatives, false_negatives)
             else:
                 print("ERROR! Unknown statistic: %s" % statistic)
 
@@ -760,6 +783,14 @@ def get_statistic_score_per_k(data, train_indices, valid_indices, train_labels, 
                 score = get_F1_score(recall, precision)
             elif statistic == "Youden's J":
                 score = get_J_statistic(recall, specificity)
+            elif statistic == "Precision":
+                score = precision
+            elif statistic == "Recall":
+                score = recall
+            elif statistic == "Specificity":
+                score = specificity
+            elif statistic == "Confusion Matrix":
+                score = (true_positives, false_positives, true_negatives, false_negatives)
             else:
                 print("ERROR! Unknown statistic: %s" % statistic)
 
@@ -801,6 +832,14 @@ def get_statistic_score_per_k(data, train_indices, valid_indices, train_labels, 
                 score = get_F1_score(recall, precision)
             elif statistic == "Youden's J":
                 score = get_J_statistic(recall, specificity)
+            elif statistic == "Precision":
+                score = precision
+            elif statistic == "Recall":
+                score = recall
+            elif statistic == "Specificity":
+                score = specificity
+            elif statistic == "Confusion Matrix":
+                score = (true_positives, false_positives, true_negatives, false_negatives)
             else:
                 print("ERROR! Unknown statistic: %s" % statistic)
 

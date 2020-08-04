@@ -203,12 +203,23 @@ def generate_ALF_data(X, amplitude_conditions, time_constant_conditions, ambiguo
     F_signal_noise = []
     noises = []
 
+    ambiguous_conditions_counter = 0
+    non_ambiguous_conditions_counter = 0
+
     for amplitude_condition in amplitude_conditions:
         for time_constant_condition in time_constant_conditions:
             if amplitude_condition in ambiguous_conditions or time_constant_condition in ambiguous_conditions:
-                n_samples = samples_per_ambiguous_condition
+                if isinstance(samples_per_ambiguous_condition, list):
+                    n_samples = samples_per_ambiguous_condition[ambiguous_conditions_counter]
+                    ambiguous_conditions_counter += 1
+                else:
+                    n_samples = samples_per_ambiguous_condition
             else:
-                n_samples = samples_per_condition
+                if isinstance(samples_per_condition, list):
+                    n_samples = samples_per_condition[non_ambiguous_conditions_counter]
+                    non_ambiguous_conditions_counter += 1
+                else:
+                    n_samples = samples_per_condition
 
             for i in range(n_samples):
                 A_conditions.append(amplitude_condition)
@@ -264,7 +275,7 @@ def generate_ALF_data(X, amplitude_conditions, time_constant_conditions, ambiguo
     return F_signal, F_signal_noise, noises, param_data
 
 
-def get_index_per_class(amplitude_conditions,time_constant_conditions, ambiguous_conditions, samples_per_condition, samples_for_ambiguous):
+def get_index_per_class(amplitude_conditions,time_constant_conditions, ambiguous_conditions, samples_per_condition, samples_per_ambiguous_condition):
     """
     Args:
         amplitude_conditions (list): list of strings indicating the height of the amplitude
@@ -280,15 +291,28 @@ def get_index_per_class(amplitude_conditions,time_constant_conditions, ambiguous
     """
     class_dict = {}
     current_index = 0
+    ambiguous_conditions_counter = 0
+    non_ambiguous_conditions_counter = 0
     for amplitude_condition in amplitude_conditions:
         for time_constant_condition in time_constant_conditions:
             condition = amplitude_condition + "-" + time_constant_condition
             if amplitude_condition in ambiguous_conditions or time_constant_condition in ambiguous_conditions:
-                class_dict[condition] = (current_index, current_index + samples_for_ambiguous-1)
-                current_index += samples_for_ambiguous
+                if isinstance(samples_per_ambiguous_condition, list):
+                    n_samples = samples_per_ambiguous_condition[ambiguous_conditions_counter]
+                    ambiguous_conditions_counter += 1
+                else:
+                    n_samples = samples_per_ambiguous_condition
+
+                class_dict[condition] = (current_index, current_index + n_samples-1)
+                current_index += n_samples
             else:
-                class_dict[condition] = (current_index, current_index + samples_per_condition-1)
-                current_index += samples_per_condition
+                if isinstance(samples_per_condition, list):
+                    n_samples = samples_per_condition[non_ambiguous_conditions_counter]
+                    non_ambiguous_conditions_counter += 1
+                else:
+                    n_samples = samples_per_condition
+                class_dict[condition] = (current_index, current_index + n_samples-1)
+                current_index += n_samples
     return class_dict
 
 

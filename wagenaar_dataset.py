@@ -699,7 +699,14 @@ data, culture_counts = merge_data_batches_ordered(data_burst_batches, day_wise =
 tiny_burst_counts, tiny_bursts_indices = load_tiny_indices_per_culture(data_dir, data_batch_names_for_tiny_indices, day_wise = False)
 tiny_bursts_in_data_indices = get_tiny_burst_indices_for_merged_data(culture_counts, tiny_bursts_indices)
 
+data_tiny = []
+for i in tiny_bursts_in_data_indices:
+    data_tiny.append(data[i])
 
+data_no_tiny = []
+for i in np.delete(range(len(data)),tiny_bursts_in_data_indices):
+    data_no_tiny.append(data[i])
+    
 padded_data, data_center = burst_batch_padding(data, padding = "peak")
 
 data_burst_by_time = np.mean(padded_data,axis = 1).T
