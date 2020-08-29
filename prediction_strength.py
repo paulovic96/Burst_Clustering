@@ -413,257 +413,167 @@ def get_J_statistic(recall, specificity):
     j = recall + specificity -1
     return j
 
-def get_F1_score_per_k(data, train_indices, valid_indices, train_labels, valid_labels, combination_type="training (equal)",
-                       true_train_labels=None, own_combinations=None, clusterwise=False):
-    k_clusters = list(valid_labels.keys())
-    training_set = data[train_indices]
-    validation_set = data[valid_indices]
-
-    if clusterwise:
-        clusterwise_str = "\n Clusterwise = " + str(clusterwise)
-    else:
-        clusterwise_str = ""
-
-    if combination_type == "true":
-        print("Calculate F1 score based on true labels!" + clusterwise_str)
-        if not true_train_labels is None:
-            true_F1_score_per_k = {}
-            for k in k_clusters:
-                true_labels_k = true_train_labels
-                valid_labels_k = valid_labels[k]
-
-
-                unique_valid_labels = list(range(k))
-                unique_true_labels = list(np.unique(true_labels_k))
-
-                print("Calculate for k=%d..." % k)
-                true_positives, false_positives, true_negatives, false_negatives = get_confusion_matrix(valid_labels_k,
-                                                                                                        true_labels_k,
-                                                                                                        unique_valid_labels,
-                                                                                                        unique_true_labels,
-                                                                                                        clusterwise)
-
-                precision = get_precision(true_positives, false_positives)
-                recall = get_recall(true_positives, false_negatives)
-                
-                f1 = get_F1_score(recall, precision)
-
-                true_F1_score_per_k[k] = f1
-
-            return true_F1_score_per_k
-        else:
-            print("True labels for the training set not found..Please provide true labels!!")
-
-    elif combination_type == "training (true)":
-        print("Calculate F1 score based on true training centroids!" + clusterwise_str)
-        if not true_train_labels is None:
-            true_F1_score_per_k = {}
-            for k in k_clusters:
-                train_labels_k = true_train_labels
-                valid_labels_k = valid_labels[k]
-
-                if len(np.unique(train_labels_k)) > 1:
-                    centroids_k, labels_centroids_based = calculate_centroids_and_predict_validation_data(training_set,
-                                                                                                          train_labels_k,
-                                                                                                          validation_set)
-
-                else:
-                    labels_centroids_based = np.zeros(len(validation_set))
-
-                unique_valid_labels = list(range(k))
-                unique_centroid_labels = list(np.unique(train_labels_k))
-
-                print("Calculate for k=%d..." % k)
-                true_positives, false_positives, true_negatives, false_negatives = get_confusion_matrix(valid_labels_k,
-                                                                                                        labels_centroids_based,
-                                                                                                        unique_valid_labels,
-                                                                                                        unique_centroid_labels,
-                                                                                                        clusterwise)
-                precision = get_precision(true_positives, false_positives)
-                recall = get_recall(true_positives, false_negatives)
-                f1 = get_F1_score(recall, precision)
-
-                true_F1_score_per_k[k] = f1
-
-            return true_F1_score_per_k
-        else:
-            print("True training set labels not found..Please provide true labels!!")
-
-    elif combination_type == "training (equal)":
-        print(
-            "Calculate F1 score based on training centroids assuming same number of clusters in both sets!" + clusterwise_str)
-        F1_score_per_k = {}
-        for k in k_clusters:
-            train_labels_k = train_labels[k]
-            valid_labels_k = valid_labels[k]
-
-            if k > 1:
-                centroids_k, labels_centroids_based = calculate_centroids_and_predict_validation_data(training_set,
-                                                                                                      train_labels_k,
-                                                                                                      validation_set)
-            else:
-                labels_centroids_based = np.zeros(len(validation_set))
-
-            unique_valid_labels = list(range(k))
-            unique_centroid_labels = list(range(k))
-
-            print("Calculate for k=%d..." % k)
-            true_positives, false_positives, true_negatives, false_negatives = get_confusion_matrix(valid_labels_k,
-                                                                                                    labels_centroids_based,
-                                                                                                    unique_valid_labels,
-                                                                                                    unique_centroid_labels,
-                                                                                                    clusterwise)
-            precision = get_precision(true_positives, false_positives)
-            recall = get_recall(true_positives, false_negatives)
-            f1 = get_F1_score(recall, precision)
-
-            F1_score_per_k[k] = f1
-
-        return F1_score_per_k
-
-
-    elif combination_type == "training (full)":
-        print(
-            "Calculate F1 score based on training centroids with full permutation of possible clusters in both sets!" + clusterwise_str)
-        F1_score_per_k_combination = {}
-        counter = 0
-        for k1k2 in product(k_clusters, repeat=2):
-            counter += 1
-            if counter % 50 == 0:
-                print("Step:%d" % counter)
-            train_labels_k = train_labels[k1k2[0]]
-            valid_labels_k = valid_labels[k1k2[1]]
-
-            if k1k2[0] > 1:
-                centroids_k, labels_centroids_based = calculate_centroids_and_predict_validation_data(training_set,
-                                                                                                      train_labels_k,
-                                                                                                      validation_set)
-
-            else:
-                labels_centroids_based = np.zeros(len(validation_set))
-
-            unique_valid_labels = list(range(k1k2[1]))
-            unique_centroid_labels = list(range(k1k2[0]))
-
-            print("Calculate for k=(%d,%d)..." % (k1k2[0],k1k2[1]))
-            true_positives, false_positives, true_negatives, false_negatives = get_confusion_matrix(valid_labels_k,
-                                                                                                    labels_centroids_based,
-                                                                                                    unique_valid_labels,
-                                                                                                    unique_centroid_labels,
-                                                                                                    clusterwise)
-            precision = get_precision(true_positives, false_positives)
-            recall = get_recall(true_positives, false_negatives)
-            f1 = get_F1_score(recall, precision)
-
-            F1_score_per_k_combination[k1k2] = f1
-
-        return F1_score_per_k_combination
-
-    elif combination_type == "training (own)":
-        print(
-            "Calculate F1 score based on training centroids with provided combination of possible clusters in both sets!" + clusterwise_str)
-        F1_score_per_k_combination = {}
-        for k1k2 in own_combinations:
-            train_labels_k = train_labels[k1k2[0]]
-            valid_labels_k = valid_labels[k1k2[1]]
-
-            if k1k2[0] > 1:
-                centroids_k, labels_centroids_based = calculate_centroids_and_predict_validation_data(training_set,
-                                                                                                      train_labels_k,
-                                                                                                      validation_set)
-
-            else:
-                labels_centroids_based = np.zeros(len(validation_set))
-
-            unique_valid_labels = list(range(k1k2[1]))
-            unique_centroid_labels = list(range(k1k2[0]))
-
-            print("Calculate for k=(%d,%d)..." % (k1k2[0],k1k2[1]))
-            true_positives, false_positives, true_negatives, false_negatives = get_confusion_matrix(valid_labels_k,
-                                                                                                    labels_centroids_based,
-                                                                                                    unique_valid_labels,
-                                                                                                    unique_centroid_labels)
-            precision = get_precision(true_positives, false_positives)
-            recall = get_recall(true_positives, false_negatives)
-            f1 = get_F1_score(recall, precision)
-
-            F1_score_per_k_combination[k1k2] = f1
-
-        return F1_score_per_k_combination
-
 
 def get_statistic_score_per_k(data, train_indices, valid_indices, train_labels, valid_labels, combination_type="training (equal)",
-                       true_train_labels=None, own_combinations=None, clusterwise=False, statistic = "F1"):
+                       true_train_labels=None, own_combinations=None, clusterwise=False, statistic = "F1", per_sample = False):
+    """ Calculate prediction strength for each cluster obtained by clustering with k clusters
+    Args:
+        data (nd.array): Array containing data (n x m)
+        train_indices (nd.arrays): training set indices
+        valid_indices (nd.arrays): valid set indices
+        train_labels (dict): dictionary of lists containing the cluster labels for each point in training set after clustering into k clusters
+                             key = k (number of clusters in clustering)
+                             value = label for each point
+        valid_labels (dict): dictionary of lists containing the cluster labels for each point in validation set after clustering into k clusters
+                             key = k (number of clusters in clustering)
+                             value = label for each point
+        combination_type (str):
+                            'true': calculate score between clustered valid fold and true/precomputed clusters
+                            'training (true)': calculate score between clustered valid fold and centroid predicted valid fold. For calulating centroids and predictions we use the training set with provided true clusters.
+                            'training (equal)': calculate scores between clustered valid fold and centroid predicted valid fold based on training set assuming same number of clusters in both validation and training.
+                            'training (full): calcualte scores between clustered valid fold and centroid predicted valid fold based on training set. Instead of assuming same number of clusters we try all combinations.
+                            'training (own): calcualte scores between clustered valid fold and centroid predicted valid fold based on training set. Instead of assuming same number of clusters we try a certain combinations.
+
+        true_train_labels (dict): precomputed or true labels.
+                                combination type 'true': true_train_labels are the true or precomputed labels for the validation set which are directly compared to the valid_labels in order to calculate scores.
+                                combination type 'training (true)': true_train_labels are the true or precomputed labels for the training set. Based on the provided clusters we calculate centroids and predict the validation fold.
+                                With the centroid predicted validation fold labels we calculate the respective score between the valid_labels.
+        own_combinations (list of tuple): List of tuple indicating number of clusters in validation [0] and training fold [1]-
+        clusterwise (bool): Whether to calculate scores for each  clusters separately
+        statistic (str): the statistic / score to calculate
+        per_sample (bool): boolean whether prediction strength is calculated per sample or per cluster
+
+    Returns:
+        prediction_strengths_per_k (dict): dictionary containing the score for each clustering/cluster/sample in c after clustering into k clusters
+    """
+
     k_clusters = list(valid_labels.keys())
     training_set = data[train_indices]
     validation_set = data[valid_indices]
 
-    if clusterwise:
-        clusterwise_str = "\n Clusterwise = " + str(clusterwise)
+    if statistic == "PS":
+        score_per_k, _ = get_prediction_strength_per_k(data, train_indices, valid_indices, train_labels, valid_labels, per_sample=per_sample, true_train_labels=true_train_labels)
+        return score_per_k
     else:
-        clusterwise_str = ""
 
-    if combination_type == "true":
-        print("Calculate %s score based on true labels!" % statistic + clusterwise_str)
-        if not true_train_labels is None:
-            score_per_k = {}
-            for k in k_clusters:
-                true_labels_k = true_train_labels
-                valid_labels_k = valid_labels[k]
-
-
-                unique_valid_labels = list(range(k))
-                unique_true_labels = list(np.unique(true_labels_k))
-
-                print("Calculate for k=%d..." % k)
-                true_positives, false_positives, true_negatives, false_negatives = get_confusion_matrix(valid_labels_k,
-                                                                                                        true_labels_k,
-                                                                                                        unique_valid_labels,
-                                                                                                        unique_true_labels,
-                                                                                                        clusterwise)
-                precision = get_precision(true_positives, false_positives)
-                recall = get_recall(true_positives, false_negatives)
-                specificity = get_specificity(true_negatives, false_positives)
-
-                if statistic == "F1":
-                    score = get_F1_score(recall, precision)
-                elif statistic == "Youden's J":
-                    score = get_J_statistic(recall, specificity)
-                elif statistic == "Precision":
-                    score = precision
-                elif statistic == "Recall":
-                    score = recall
-                elif statistic == "Specificity":
-                    score = specificity
-                elif statistic == "Confusion Matrix":
-                    score = (true_positives, false_positives, true_negatives, false_negatives)
-                else:
-                    print("ERROR! Unknown statistic: %s" % statistic)
-
-                score_per_k[k] = score
-
-            return score_per_k
+        if clusterwise:
+            clusterwise_str = "\n Clusterwise = " + str(clusterwise)
         else:
-            print("True training set labels not found..Please provide true labels!!")
+            clusterwise_str = ""
 
-    elif combination_type == "training (true)":
-        print("Calculate %s score based on true training centroids!" % statistic + clusterwise_str)
-        if not true_train_labels is None:
+        if combination_type == "true":
+            print("Calculate %s score based on true labels!" % statistic + clusterwise_str)
+            if not true_train_labels is None:
+                score_per_k = {}
+                for k in k_clusters:
+                    if isinstance(true_train_labels,dict):
+                        true_labels_k = true_train_labels[k]
+                    else:
+                        true_labels_k = true_train_labels
+                    valid_labels_k = valid_labels[k]
+
+
+                    unique_valid_labels = list(range(k))
+                    unique_true_labels = list(np.unique(true_labels_k))
+
+                    print("Calculate for k=%d..." % k)
+                    true_positives, false_positives, true_negatives, false_negatives = get_confusion_matrix(valid_labels_k,
+                                                                                                            true_labels_k,
+                                                                                                            unique_valid_labels,
+                                                                                                            unique_true_labels,
+                                                                                                            clusterwise)
+                    precision = get_precision(true_positives, false_positives)
+                    recall = get_recall(true_positives, false_negatives)
+                    specificity = get_specificity(true_negatives, false_positives)
+
+                    if statistic == "F1":
+                        score = get_F1_score(recall, precision)
+                    elif statistic == "Youden's J":
+                        score = get_J_statistic(recall, specificity)
+                    elif statistic == "Precision":
+                        score = precision
+                    elif statistic == "Recall":
+                        score = recall
+                    elif statistic == "Specificity":
+                        score = specificity
+                    elif statistic == "Confusion Matrix":
+                        score = (true_positives, false_positives, true_negatives, false_negatives)
+                    else:
+                        print("ERROR! Unknown statistic: %s" % statistic)
+
+                    score_per_k[k] = score
+
+                return score_per_k
+            else:
+                print("True training set labels not found..Please provide true labels!!")
+
+        elif combination_type == "training (true)":
+            print("Calculate %s score based on true training centroids!" % statistic + clusterwise_str)
+            if not true_train_labels is None:
+                score_per_k = {}
+                for k in k_clusters:
+                    train_labels_k = true_train_labels
+                    valid_labels_k = valid_labels[k]
+
+                    if len(np.unique(train_labels_k)) > 1:
+                        centroids_k, labels_centroids_based = calculate_centroids_and_predict_validation_data(training_set,
+                                                                                                              train_labels_k,
+                                                                                                              validation_set)
+
+                    else:
+                        labels_centroids_based = np.zeros(len(validation_set))
+
+                    unique_valid_labels = list(range(k))
+                    unique_centroid_labels = list(np.unique(train_labels_k))
+
+                    print("Calculate for k=%d..." % k)
+                    true_positives, false_positives, true_negatives, false_negatives = get_confusion_matrix(valid_labels_k,
+                                                                                                            labels_centroids_based,
+                                                                                                            unique_valid_labels,
+                                                                                                            unique_centroid_labels,
+                                                                                                            clusterwise)
+                    precision = get_precision(true_positives, false_positives)
+                    recall = get_recall(true_positives, false_negatives)
+                    specificity = get_specificity(true_negatives, false_positives)
+
+                    if statistic == "F1":
+                        score = get_F1_score(recall, precision)
+                    elif statistic == "Youden's J":
+                        score = get_J_statistic(recall, specificity)
+                    elif statistic == "Precision":
+                        score = precision
+                    elif statistic == "Recall":
+                        score = recall
+                    elif statistic == "Specificity":
+                        score = specificity
+                    elif statistic == "Confusion Matrix":
+                        score = (true_positives, false_positives, true_negatives, false_negatives)
+                    else:
+                        print("ERROR! Unknown statistic: %s" % statistic)
+
+                    score_per_k[k] = score
+
+                return score_per_k
+            else:
+                print("True training set labels not found..Please provide true labels!!")
+
+        elif combination_type == "training (equal)":
+            print(
+                "Calculate %s score based on training centroids assuming same number of clusters in both sets!" % statistic+ clusterwise_str)
             score_per_k = {}
             for k in k_clusters:
-                train_labels_k = true_train_labels
+                train_labels_k = train_labels[k]
                 valid_labels_k = valid_labels[k]
 
-                if len(np.unique(train_labels_k)) > 1:
+                if k > 1:
                     centroids_k, labels_centroids_based = calculate_centroids_and_predict_validation_data(training_set,
                                                                                                           train_labels_k,
                                                                                                           validation_set)
-
                 else:
                     labels_centroids_based = np.zeros(len(validation_set))
 
                 unique_valid_labels = list(range(k))
-                unique_centroid_labels = list(np.unique(train_labels_k))
+                unique_centroid_labels = list(range(k))
 
                 print("Calculate for k=%d..." % k)
                 true_positives, false_positives, true_negatives, false_negatives = get_confusion_matrix(valid_labels_k,
@@ -671,6 +581,7 @@ def get_statistic_score_per_k(data, train_indices, valid_indices, train_labels, 
                                                                                                         unique_valid_labels,
                                                                                                         unique_centroid_labels,
                                                                                                         clusterwise)
+
                 precision = get_precision(true_positives, false_positives)
                 recall = get_recall(true_positives, false_negatives)
                 specificity = get_specificity(true_negatives, false_positives)
@@ -693,156 +604,106 @@ def get_statistic_score_per_k(data, train_indices, valid_indices, train_labels, 
                 score_per_k[k] = score
 
             return score_per_k
-        else:
-            print("True training set labels not found..Please provide true labels!!")
-
-    elif combination_type == "training (equal)":
-        print(
-            "Calculate %s score based on training centroids assuming same number of clusters in both sets!" % statistic+ clusterwise_str)
-        score_per_k = {}
-        for k in k_clusters:
-            train_labels_k = train_labels[k]
-            valid_labels_k = valid_labels[k]
-
-            if k > 1:
-                centroids_k, labels_centroids_based = calculate_centroids_and_predict_validation_data(training_set,
-                                                                                                      train_labels_k,
-                                                                                                      validation_set)
-            else:
-                labels_centroids_based = np.zeros(len(validation_set))
-
-            unique_valid_labels = list(range(k))
-            unique_centroid_labels = list(range(k))
-
-            print("Calculate for k=%d..." % k)
-            true_positives, false_positives, true_negatives, false_negatives = get_confusion_matrix(valid_labels_k,
-                                                                                                    labels_centroids_based,
-                                                                                                    unique_valid_labels,
-                                                                                                    unique_centroid_labels,
-                                                                                                    clusterwise)
-
-            precision = get_precision(true_positives, false_positives)
-            recall = get_recall(true_positives, false_negatives)
-            specificity = get_specificity(true_negatives, false_positives)
-
-            if statistic == "F1":
-                score = get_F1_score(recall, precision)
-            elif statistic == "Youden's J":
-                score = get_J_statistic(recall, specificity)
-            elif statistic == "Precision":
-                score = precision
-            elif statistic == "Recall":
-                score = recall
-            elif statistic == "Specificity":
-                score = specificity
-            elif statistic == "Confusion Matrix":
-                score = (true_positives, false_positives, true_negatives, false_negatives)
-            else:
-                print("ERROR! Unknown statistic: %s" % statistic)
-
-            score_per_k[k] = score
-
-        return score_per_k
 
 
-    elif combination_type == "training (full)":
-        print(
-            "Calculate %s score based on training centroids with full permutation of possible clusters in both sets!" % statistic + clusterwise_str)
-        score_per_k_combination = {}
-        counter = 0
-        for k1k2 in product(k_clusters, repeat=2):
-            counter += 1
-            if counter % 50 == 0:
-                print("Step:%d" % counter)
-            train_labels_k = train_labels[k1k2[0]]
-            valid_labels_k = valid_labels[k1k2[1]]
+        elif combination_type == "training (full)":
+            print(
+                "Calculate %s score based on training centroids with full permutation of possible clusters in both sets!" % statistic + clusterwise_str)
+            score_per_k_combination = {}
+            counter = 0
+            for k1k2 in product(k_clusters, repeat=2):
+                counter += 1
+                if counter % 50 == 0:
+                    print("Step:%d" % counter)
+                train_labels_k = train_labels[k1k2[0]]
+                valid_labels_k = valid_labels[k1k2[1]]
 
-            if k1k2[0] > 1:
-                centroids_k, labels_centroids_based = calculate_centroids_and_predict_validation_data(training_set,
-                                                                                                      train_labels_k,
-                                                                                                      validation_set)
+                if k1k2[0] > 1:
+                    centroids_k, labels_centroids_based = calculate_centroids_and_predict_validation_data(training_set,
+                                                                                                          train_labels_k,
+                                                                                                          validation_set)
 
-            else:
-                labels_centroids_based = np.zeros(len(validation_set))
+                else:
+                    labels_centroids_based = np.zeros(len(validation_set))
 
-            unique_valid_labels = list(range(k1k2[1]))
-            unique_centroid_labels = list(range(k1k2[0]))
+                unique_valid_labels = list(range(k1k2[1]))
+                unique_centroid_labels = list(range(k1k2[0]))
 
-            print("Calculate for k=(%d,%d)..." % (k1k2[0],k1k2[1]))
-            true_positives, false_positives, true_negatives, false_negatives = get_confusion_matrix(valid_labels_k,
-                                                                                                    labels_centroids_based,
-                                                                                                    unique_valid_labels,
-                                                                                                    unique_centroid_labels,
-                                                                                                    clusterwise)
+                print("Calculate for k=(%d,%d)..." % (k1k2[0],k1k2[1]))
+                true_positives, false_positives, true_negatives, false_negatives = get_confusion_matrix(valid_labels_k,
+                                                                                                        labels_centroids_based,
+                                                                                                        unique_valid_labels,
+                                                                                                        unique_centroid_labels,
+                                                                                                        clusterwise)
 
-            precision = get_precision(true_positives, false_positives)
-            recall = get_recall(true_positives, false_negatives)
-            specificity = get_specificity(true_negatives, false_positives)
+                precision = get_precision(true_positives, false_positives)
+                recall = get_recall(true_positives, false_negatives)
+                specificity = get_specificity(true_negatives, false_positives)
 
-            if statistic == "F1":
-                score = get_F1_score(recall, precision)
-            elif statistic == "Youden's J":
-                score = get_J_statistic(recall, specificity)
-            elif statistic == "Precision":
-                score = precision
-            elif statistic == "Recall":
-                score = recall
-            elif statistic == "Specificity":
-                score = specificity
-            elif statistic == "Confusion Matrix":
-                score = (true_positives, false_positives, true_negatives, false_negatives)
-            else:
-                print("ERROR! Unknown statistic: %s" % statistic)
+                if statistic == "F1":
+                    score = get_F1_score(recall, precision)
+                elif statistic == "Youden's J":
+                    score = get_J_statistic(recall, specificity)
+                elif statistic == "Precision":
+                    score = precision
+                elif statistic == "Recall":
+                    score = recall
+                elif statistic == "Specificity":
+                    score = specificity
+                elif statistic == "Confusion Matrix":
+                    score = (true_positives, false_positives, true_negatives, false_negatives)
+                else:
+                    print("ERROR! Unknown statistic: %s" % statistic)
 
-            score_per_k_combination[k1k2] = score
+                score_per_k_combination[k1k2] = score
 
-        return score_per_k_combination
+            return score_per_k_combination
 
-    elif combination_type == "training (own)":
-        print(
-            "Calculate %s score based on training centroids with provided combination of possible clusters in both sets!" % statistic + clusterwise_str)
-        score_per_k_combination = {}
-        for k1k2 in own_combinations:
-            train_labels_k = train_labels[k1k2[0]]
-            valid_labels_k = valid_labels[k1k2[1]]
+        elif combination_type == "training (own)":
+            print(
+                "Calculate %s score based on training centroids with provided combination of possible clusters in both sets!" % statistic + clusterwise_str)
+            score_per_k_combination = {}
+            for k1k2 in own_combinations:
+                train_labels_k = train_labels[k1k2[0]]
+                valid_labels_k = valid_labels[k1k2[1]]
 
-            if k1k2[0] > 1:
-                centroids_k, labels_centroids_based = calculate_centroids_and_predict_validation_data(training_set,
-                                                                                                      train_labels_k,
-                                                                                                      validation_set)
+                if k1k2[0] > 1:
+                    centroids_k, labels_centroids_based = calculate_centroids_and_predict_validation_data(training_set,
+                                                                                                          train_labels_k,
+                                                                                                          validation_set)
 
-            else:
-                labels_centroids_based = np.zeros(len(validation_set))
+                else:
+                    labels_centroids_based = np.zeros(len(validation_set))
 
-            unique_valid_labels = list(range(k1k2[1]))
-            unique_centroid_labels = list(range(k1k2[0]))
+                unique_valid_labels = list(range(k1k2[1]))
+                unique_centroid_labels = list(range(k1k2[0]))
 
-            print("Calculate for k=(%d,%d)..." % (k1k2[0],k1k2[1]))
-            true_positives, false_positives, true_negatives, false_negatives = get_confusion_matrix(valid_labels_k,
-                                                                                                    labels_centroids_based,
-                                                                                                    unique_valid_labels,
-                                                                                                    unique_centroid_labels)
+                print("Calculate for k=(%d,%d)..." % (k1k2[0],k1k2[1]))
+                true_positives, false_positives, true_negatives, false_negatives = get_confusion_matrix(valid_labels_k,
+                                                                                                        labels_centroids_based,
+                                                                                                        unique_valid_labels,
+                                                                                                        unique_centroid_labels)
 
 
-            precision = get_precision(true_positives, false_positives)
-            recall = get_recall(true_positives, false_negatives)
-            specificity = get_specificity(true_negatives, false_positives)
+                precision = get_precision(true_positives, false_positives)
+                recall = get_recall(true_positives, false_negatives)
+                specificity = get_specificity(true_negatives, false_positives)
 
-            if statistic == "F1":
-                score = get_F1_score(recall, precision)
-            elif statistic == "Youden's J":
-                score = get_J_statistic(recall, specificity)
-            elif statistic == "Precision":
-                score = precision
-            elif statistic == "Recall":
-                score = recall
-            elif statistic == "Specificity":
-                score = specificity
-            elif statistic == "Confusion Matrix":
-                score = (true_positives, false_positives, true_negatives, false_negatives)
-            else:
-                print("ERROR! Unknown statistic: %s" % statistic)
+                if statistic == "F1":
+                    score = get_F1_score(recall, precision)
+                elif statistic == "Youden's J":
+                    score = get_J_statistic(recall, specificity)
+                elif statistic == "Precision":
+                    score = precision
+                elif statistic == "Recall":
+                    score = recall
+                elif statistic == "Specificity":
+                    score = specificity
+                elif statistic == "Confusion Matrix":
+                    score = (true_positives, false_positives, true_negatives, false_negatives)
+                else:
+                    print("ERROR! Unknown statistic: %s" % statistic)
 
-            score_per_k_combination[k1k2] = score
+                score_per_k_combination[k1k2] = score
 
-        return score_per_k_combination
+            return score_per_k_combination

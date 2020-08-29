@@ -63,7 +63,7 @@ def get_training_set_for_ambiguous_data(data, cluster_dict, ambiguous_conditions
 
 
 def get_training_folds(data, cluster_dict=None, cluster_split="random",only_training_clusters = None, seed=42, folds = 2):
-    seed = np.random.seed(seed)
+    np.random.seed(seed)
     train_fold_indices = []
     valid_fold_indices = []
     if cluster_split == "balanced":
@@ -74,7 +74,10 @@ def get_training_folds(data, cluster_dict=None, cluster_split="random",only_trai
                     train_fold = []
                     for cluster, start_end_point in cluster_dict.items():
                         if isinstance(start_end_point, tuple):
-                            cluster_indices = np.arange(start_end_point[0], start_end_point[1] + 1)
+                            if len(start_end_point)>0:
+                                cluster_indices = np.arange(start_end_point[0], start_end_point[1] + 1)
+                            else:
+                                cluster_indices = []
                         else:
                             cluster_indices = start_end_point
                         np.random.shuffle(cluster_indices)
@@ -93,7 +96,10 @@ def get_training_folds(data, cluster_dict=None, cluster_split="random",only_trai
                 train_fold = []
                 for cluster, start_end_point in cluster_dict.items():
                     if isinstance(start_end_point, tuple):
-                        cluster_indices = np.arange(start_end_point[0], start_end_point[1] + 1)
+                        if len(start_end_point)>0:
+                            cluster_indices = np.arange(start_end_point[0], start_end_point[1] + 1)
+                        else:
+                            cluster_indices = []
                     else:
                         cluster_indices = start_end_point
                     np.random.shuffle(cluster_indices)

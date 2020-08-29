@@ -16,13 +16,13 @@ import seaborn as sns
 from scipy import signal, stats
 import subprocess
 
-WAGENAAR_FILE_NAME = "http://neurodatasharing.bme.gatech.edu/development-data/html/wget/%s.%s.%s.%s.0.0.%d.list"
+WAGENAAR_FILE_NAME = "http://neurodatasharing.bme.gatech.edu/development-data/html/wget/%s.%s.%s.%s.%d.%d.%d.list"
 
 #Full Info: http://neurodatasharing.bme.gatech.edu/development-data/html/wget/daily.spont.dense.full.0.0.20.list
 #Compact Matlab: http://neurodatasharing.bme.gatech.edu/development-data/html/wget/daily.spont.dense.mat.0.0.20.list
 #Compact txt: http://neurodatasharing.bme.gatech.edu/development-data/html/wget/daily.spont.dense.text.0.0.20.list
 
-def download_wagenaar_data(day=20, time="daily", stimulus = "spont", density="dense", format="full"):
+def download_wagenaar_data(day=20,culture=None,time="daily", stimulus = "spont", density="dense", format="full"):
     """
     :param day: day of recording
     :param time: daily or overnight observation
@@ -44,8 +44,13 @@ def download_wagenaar_data(day=20, time="daily", stimulus = "spont", density="de
         else:
             os.makedirs(path)
         print("Successfully created the directory %s" % path)
-
-    url = WAGENAAR_FILE_NAME % (time, stimulus, density, format, day)
+        
+     
+    if day:
+        url = WAGENAAR_FILE_NAME % (time, stimulus, density, format,0,0,day)
+    elif culture:
+        culture_number = culture.split("-")
+        url = WAGENAAR_FILE_NAME % (time, stimulus, density, format,int(culture_number[0]),int(culture_number[1]),0)
     print("start downloading data from...\n %s" % url)
 
 
@@ -238,7 +243,11 @@ def burstlets_detection(spike_data):
         spike_trains.append(np.asarray(spike_train))
 
         # spike count for active time
-        firing_rate = len(spike_train) / (max(spike_train) - min(spike_train))
+        # print(len(spike_train),max(spike_train),min(spike_train))
+        if max(spike_train) - min(spike_train) == 0:
+            firing_rate = 1
+        else:
+            firing_rate = len(spike_train) / (max(spike_train) - min(spike_train))
         # threshold
         threshold = 1 / firing_rate * 0.25 # ensures suceeding spikes faster 4 * average firing rate considered burstlets
         threshold = min(0.1, threshold)
@@ -305,32 +314,36 @@ def burstlets_detection(spike_data):
 
 def burst_detection(burstlets):
     bursts = []
-    j = 1
-    count_burstlets = 1
+    if len(burstlets) > 0:
+        j = 1
+        count_burstlets = 1
 
-    current_burstlet = burstlets[0]
-    next_burstlet = burstlets[j]
-    start_time = current_burstlet[0]
-    end_time = current_burstlet[1]
+        current_burstlet = burstlets[0]
+        next_burstlet = burstlets[j]
+        start_time = current_burstlet[0]
+        end_time = current_burstlet[1]
 
-    while (j < len(burstlets) - 1):
-        if next_burstlet[0] <= end_time:  # burstlet starts before current ends --> ongoing
-            count_burstlets += 1
-            end_time = max(next_burstlet[1], end_time)  # set new end
-            j += 1
-            next_burstlet = burstlets[j]
-        else:
-            bursts.append([start_time, end_time, count_burstlets])  # end of burstlet sequence
-            count_burstlets = 1  # restet count
-            current_burstlet = next_burstlet  # set current burstlet
-            j += 1
-            next_burstlet = burstlets[j]  # set next burstlet
-            start_time = current_burstlet[0]  # set new starting time of potential burst
-            end_time = current_burstlet[1]  # set new end time
+        while (j < len(burstlets) - 1):
+            if next_burstlet[0] <= end_time:  # burstlet starts before current ends --> ongoing
+                count_burstlets += 1
+                end_time = max(next_burstlet[1], end_time)  # set new end
+                j += 1
+                next_burstlet = burstlets[j]
+            else:
+                bursts.append([start_time, end_time, count_burstlets])  # end of burstlet sequence
+                count_burstlets = 1  # restet count
+                current_burstlet = next_burstlet  # set current burstlet
+                j += 1
+                next_burstlet = burstlets[j]  # set next burstlet
+                start_time = current_burstlet[0]  # set new starting time of potential burst
+                end_time = current_burstlet[1]  # set new end time
 
-    bursts = np.asarray(bursts)
-    detected_bursts = bursts[
-        np.where(bursts[:, 2] > 1)]  # more than 2 channels active at the same time with overlapping burstlets
+        bursts = np.asarray(bursts)
+   
+    if len(bursts) > 0:
+        detected_bursts = bursts[np.where(bursts[:, 2] > 1)]  # more than 2 channels active at the same time with overlapping burstlets
+    else:
+        detected_bursts = []
     return detected_bursts
 
 
@@ -369,6 +382,7 @@ def extract_burst_data(spike_data, detected_bursts, include_context=True):
             data_i = spike_data[(interval_before <= spike_data['time']) & (spike_data['time'] <= interval_after)]
             data_i = data_i.assign(burst=i)
             burst_data = burst_data.append(data_i, ignore_index=True)
+    
     return burst_data
 
 
@@ -520,14 +534,17 @@ def data_preprocessing(spike_files, data_dir):
 
             #print(len(valid_binned_detected_bursts_with_context), np.amax(detected_bursts_tiny_index))
 
-            save_burst_data_as_json(burst_data, data_dir, "burst_data_" + culture_names[i])
-            save_burst_batch(burst_batch, data_dir, "burst_data_batch_" + culture_names[i])
-            np.save(data_dir + 'burst_data_batch_tiny_index_' + culture_names[i], detected_bursts_tiny_index)
-
 
         else:
             print("No bursts found in %s" % culture_names[i])
-
+            burst_data = pd.DataFrame([])
+            burst_batch = []
+            detected_bursts_tiny_index = []
+        
+        
+        save_burst_data_as_json(burst_data, data_dir, "burst_data_" + culture_names[i])
+        save_burst_batch(burst_batch, data_dir, "burst_data_batch_" + culture_names[i])
+        np.save(data_dir + 'burst_data_batch_tiny_index_' + culture_names[i], detected_bursts_tiny_index)
 
 
 def nested_ndarrays(data):
@@ -547,9 +564,9 @@ def merge_data_batches_ordered(data_batches,day_wise = False):
     keys = np.sort(list(data_batches.keys()))
     if day_wise:
         culture_names = []
-        days = np.sort(np.unique([x.split("_")[-1] for x in keys]))
+        days = np.sort(np.unique([int(x.split("_")[-1]) for x in keys]))
         for day in days:
-            day_i = keys[[day in culture for culture in keys]]
+            day_i = keys[[str(day) == culture.split("_")[-1] for culture in keys]]
             culture_names += list(np.sort(day_i))
     else:
         culture_names = keys
@@ -571,9 +588,9 @@ def load_tiny_indices_per_culture(data_dir, tiny_indices_names, day_wise=False, 
     keys = np.sort(list(tiny_indices_names))
     if day_wise:
         culture_names = []
-        days = np.sort(np.unique([x.split("_")[-1] for x in keys]))
+        days = np.sort(np.unique([int(x.split("_")[-1]) for x in keys]))
         for day in days:
-            day_i = keys[[day in culture for culture in keys]]
+            day_i = keys[[str(day) == culture.split("_")[-1] for culture in keys]]
             culture_names += list(np.sort(day_i))
     else:
         culture_names = keys
@@ -583,7 +600,9 @@ def load_tiny_indices_per_culture(data_dir, tiny_indices_names, day_wise=False, 
 
     for i, key in enumerate(culture_names):
         if nd_position:
-            indices = np.load(data_dir + key + ".npy")[0]
+            indices = np.load(data_dir + key + ".npy")
+            if len(indices) > 0:
+                indices = np.load(data_dir + key + ".npy")[0]
         else:
             indices = np.load(data_dir + key + ".npy")
         burst_count = len(indices)
@@ -613,19 +632,24 @@ def get_tiny_burst_indices_for_merged_data(culture_counts, tiny_bursts_indices):
     return tiny_bursts_in_data_indices
 
 
-def plot_data_burst_distribution(culture_counts, tiny_burst_counts):
+def plot_data_burst_distribution(culture_counts, tiny_burst_counts, title = "Number of detected Bursts per Culture",daywise=False):
     plt.close("all")
     # The position of the bars on the x-axis
     r = range(len(culture_counts.keys()))
 
     # Names of group and bar width
-    keys = np.sort(list(culture_counts.keys()))
+    if daywise:
+        keys_sorting = np.argsort([int(x.split("_")[-1]) for x in list(culture_counts.keys())])
+        keys = np.asarray(list(culture_counts.keys()))[keys_sorting]
+        keys_tiny = np.asarray(list(tiny_burst_counts.keys()))[keys_sorting]
+    else:                                          
+        keys = np.sort(list(culture_counts.keys()))
+        keys_tiny = np.sort(list(tiny_burst_counts.keys()))
 
     names = ["sparse_" + ".".join(x.split('_')[-3:]) if x.find("Sparse") >= 0 else ".".join(x.split('_')[-3:]) for x in
              keys]
-    bar_tiny = [tiny_burst_counts[key] for key in np.sort(list(tiny_burst_counts.keys()))]
-    bar_no_tiny = [culture_counts[key.replace("_tiny_index", "")] - tiny_burst_counts[key] for key in
-                   np.sort(list(tiny_burst_counts.keys()))]
+    bar_tiny = [tiny_burst_counts[key] for key in keys_tiny]
+    bar_no_tiny = [culture_counts[key.replace("_tiny_index", "")] - tiny_burst_counts[key] for key in keys_tiny]
     # bar = [culture_counts[key] for key in np.sort(list(culture_counts.keys()))]
     barWidth = 1
 
@@ -671,7 +695,7 @@ def plot_data_burst_distribution(culture_counts, tiny_burst_counts):
     ax.set_ylabel("#Bursts", fontsize=20, labelpad=10)
     ax.set_yticks(range(0, 4000, 500))
     ax.set_yticklabels(range(0, 4000, 500), fontsize=15)
-    ax.set_title("Number of detected Bursts per Culture", fontsize=30, pad=20)
+    ax.set_title(title, fontsize=30, pad=20)
     # Show graphic
     ax.legend(fontsize=15)
     # ax.set_title("Burst per culture", fontsize = 40)
@@ -679,61 +703,11 @@ def plot_data_burst_distribution(culture_counts, tiny_burst_counts):
 
 def get_culture_dict(culture_count_dict):
     culture_boarders = np.sort(np.append(np.cumsum(list(culture_count_dict.values())),0))
+    print(culture_boarders)
     culture_dict = {}
     for i,key in enumerate(culture_count_dict.keys()):
-        culture_dict[key] = (culture_boarders[i], culture_boarders[i+1]-1)
+        if culture_count_dict[key] == 0:
+            culture_dict[key] = ()
+        else:
+            culture_dict[key] = (culture_boarders[i], culture_boarders[i+1]-1)
     return culture_dict
-
-"""
-data_dir = "data/raw_data/daily_spontanous_dense/day20/"
-spike_files = [x for x in os.listdir(data_dir) if x.endswith(".spike")]
-data_burst_batches = [x for x in os.listdir(data_dir) if x.find("burst_data_batch_") >= 0 and x.find("tiny") <0]
-tiny_burst_indices = [x for x in os.listdir(data_dir) if x.find("burst_data_batch_tiny_index") >= 0]
-data_batch_names = [x.split('.')[0] for x in data_burst_batches]
-data_batch_names_for_tiny_indices = [x.split('.')[0] for x in tiny_burst_indices]
-
-
-data_burst_batches = load_batch_files_with_number_bursts(data_dir, data_batch_names)
-data, culture_counts = merge_data_batches_ordered(data_burst_batches, day_wise = False)
-
-tiny_burst_counts, tiny_bursts_indices = load_tiny_indices_per_culture(data_dir, data_batch_names_for_tiny_indices, day_wise = False)
-tiny_bursts_in_data_indices = get_tiny_burst_indices_for_merged_data(culture_counts, tiny_bursts_indices)
-
-data_tiny = []
-for i in tiny_bursts_in_data_indices:
-    data_tiny.append(data[i])
-
-data_no_tiny = []
-for i in np.delete(range(len(data)),tiny_bursts_in_data_indices):
-    data_no_tiny.append(data[i])
-    
-padded_data, data_center = burst_batch_padding(data, padding = "peak")
-
-data_burst_by_time = np.mean(padded_data,axis = 1).T
-#data_burst_by_time_shuffled = (np.random.permutation(data_burst_by_time.T)).T
-print("Burst data Batch: ", padded_data.shape)
-print("Averaged over channels: ", data_burst_by_time.shape)
-print("Centered at: ", data_center)
-
-#np.save(data_dir + 'padded_data_day_20.npy', padded_data)
-#np.save(data_dir + 'data_burst_by_time_day_20.npy', data_burst_by_time)
-
-tiny_bursts = data_burst_by_time.T[tiny_bursts_in_data_indices]
-no_tiny_bursts = np.delete(data_burst_by_time.T,tiny_bursts_in_data_indices,axis = 0)
-
-
-np.random.seed(2)
-np.random.shuffle(tiny_bursts)
-np.random.shuffle(no_tiny_bursts)
-
-plt.figure(figsize=(20, 10))
-for burst in no_tiny_bursts[0:200]:
-    plt.plot(burst)
-plt.xlabel("Time (10ms bins)", fontsize=15, labelpad=10)
-plt.xticks(fontsize=12)
-plt.yticks(fontsize=15)
-plt.ylabel("Spike Count", fontsize=15, labelpad=10)
-plt.title("Burst Examples averaged over Channels", fontsize=20, pad=20)
-# plt.xlim((7500,11000))
-plt.show()
-"""
